@@ -1,0 +1,13 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Não redirecionar se for um desses arquivos antigos (Legado)
+    RewriteCond %{REQUEST_URI} !^/login\.php$
+    RewriteCond %{REQUEST_URI} !^/clientes\.php$
+    RewriteCond %{REQUEST_URI} !^/catalogo\.php$
+    RewriteCond %{REQUEST_URI} !^/gerar_os\.php$
+
+    # Se o acesso não for diretamente na pasta public, redireciona para lá
+    RewriteCond %{REQUEST_URI} !public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

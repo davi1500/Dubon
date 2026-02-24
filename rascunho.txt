@@ -1,0 +1,12 @@
+/ (Raiz do Projeto)
+|-- public/
+|   |-- index.php      <-- ÚNICO ponto de entrada da aplicação.
+|   |-- css/
+|   |-- js/
+|-- src/
+|   |-- Controllers/   <-- Lógica que decide o que fazer (ex: ServicoController.php)
+|   |-- Models/        <-- Lógica de banco de dados (se quisermos separar)
+|   |-- Views/         <-- Arquivos de HTML puro (ex: servicos.view.php)
+|   |-- Router.php     <-- O "cérebro" que lê a URL e chama o Controller certo
+|-- conexao.php
+|-- ... (outros arquivos de configuração)

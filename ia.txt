@@ -1,0 +1,69 @@
+
+PROJETO: Sistema de Gestão - Dubom Refrigeração
+DATA DA ÚLTIMA ATUALIZAÇÃO: Fevereiro 2026
+
+--- TECNOLOGIAS ---
+- Backend: PHP Puro (Single File Architecture).
+- Database: SQLite (Migrado de JSON).
+- Frontend: HTML5, Bootstrap 5, JavaScript (Vanilla).
+- Autenticação: Sessão PHP simples baseada em arquivo JSON.
+
+--- ARQUIVOS PRINCIPAIS ---
+1. index.php: 
+   - Core do sistema. Funciona como API (POST/GET) e View.
+   - Contém lógica de permissões (Admin vê financeiro, Funcionário vê operacional).
+   - Gerencia CRUD de serviços.
+2. catalogo.php:
+   - Área restrita ao Admin.
+   - Gerencia preços sugeridos e custos.
+   - Exibe dashboard de inteligência (Lucro vs Faturamento).
+3. login.php: Porta de entrada.
+4. clientes.php: Gestão de base de clientes e histórico.
+5. conexao.php: Configuração do SQLite e Migrations automáticas.
+6. gerar_os.php: Gerador de PDF/Impressão de Ordem de Serviço e Recibos.
+
+--- REGRAS DE NEGÓCIO IMPLEMENTADAS ---
+
+1. NÍVEIS DE ACESSO (RBAC):
+   - Admin: Acesso total. Vê valores (R$), Dashboard financeiro, Botão de Excluir, Edita Catálogo.
+   - Funcionário: Acesso restrito. Não vê totais no topo. Na lista, valores aparecem como "Registrado". Pode criar serviços, mas os campos de valor ficam ocultos (calculados via JS/Catálogo).
+
+2. CATEGORIZAÇÃO E ÍCONES:
+   - O sistema não exige seleção manual de ícones o tempo todo.
+   - Lógica "adivinharCategoria(texto)": Lê a descrição (ex: "Split", "Geladeira") e define o ícone automaticamente.
+   - Catálogo: Ao selecionar um item do catálogo, o ícone e a categoria já vêm preenchidos.
+
+3. FINANCEIRO E PAGAMENTOS PARCIAIS:
+   - Estrutura: Valor Total (R$) | Valor Recebido (R$) | Restante (Calculado).
+   - Status "Pago": Ao selecionar, o sistema preenche automaticamente o Valor Recebido com o Total.
+   - Dashboard: O card "Faturamento" soma apenas o campo "valor_pago", garantindo realidade de caixa.
+
+4. UX/UI (RESPONSIVIDADE):
+   - Mobile First: Inputs de descrição ocupam linha inteira em telas pequenas.
+   - Separadores de Data: Estilo visual (Hoje, Ontem, Data) na lista.
+   - Autocomplete: Sugere clientes e serviços (com preços) enquanto digita.
+   - Logística: Integração visual com Google Maps/Waze através do cadastro de endereços.
+   - Documentação: Geração automática de OS/Recibo em layout A4 para envio via WhatsApp/Impressão.
+
+--- CONTEXTO DA EMPRESA (PERSONA) ---
+- Equipe: Cresceu para 4 pessoas. O dono (Pai) não trabalha mais sozinho.
+- Operação: O dono sabe endereços de cabeça, mas a equipe precisa dessa informação no sistema.
+- Comunicação Atual: O dono envia áudios no WhatsApp explicando o serviço e valor. Funciona pela confiança, mas o objetivo é profissionalizar com Recibos/OS formais.
+- Futuro: Venda de peças e controle de estoque/despesas.
+
+--- ESTRUTURA DE DADOS (JSON) ---
+Objeto Serviço:
+{
+  "id": timestamp,
+  "cliente": string,
+  "itens": [ { "descricao": string, "valor": float, "quantidade": int, "categoria": string } ],
+  "valor": float (Total),
+  "valor_pago": float (Entrada),
+  "status": string (Agendado, Em Andamento, Aguardando Peças, Concluido, Pago)
+}
+
+--- PRÓXIMOS PASSOS (TODO LIST) ---
+1. Controle de Despesas: Criar tabela e interface para lançar gastos (gasolina, almoço) e abater do lucro no Dashboard.
+2. Botão WhatsApp: Link direto nos cards para enviar mensagem/OS pré-formatada.
+3. Gestão de Usuários: Interface para o Admin cadastrar/remover logins da equipe (CRUD Usuários).
+4. Personalização Visual: Inserir logotipo real (imagem) na OS e ajustar telefone de contato.
