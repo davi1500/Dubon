@@ -7,14 +7,14 @@ error_reporting(E_ALL); // Reporta todos os erros
 session_start();
 // Se não for admin, chuta de volta pro index
 if (!isset($_SESSION['usuario_nivel']) || $_SESSION['usuario_nivel'] !== 'admin') {
-    header('Location: index.php');
+    header('Location: /');
     exit;
 }
     
 // Configuração dos arquivos
-require_once 'conexao.php';
-$arquivo_catalogo = 'catalogo.json';
-$arquivo_categorias = 'categorias.json';
+require_once __DIR__ . '/conexao.php';
+$arquivo_catalogo = __DIR__ . '/catalogo.json';
+$arquivo_categorias = __DIR__ . '/categorias.json';
     
 // API para SALVAR o catálogo
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -156,7 +156,7 @@ if (isset($_GET['acao'])) {
 </head>
 <body>
 
-<?php require_once '_partials/menu.php'; ?>
+<?php require_once __DIR__ . '/_partials/menu.php'; ?>
 
 <div class="main-content">
     <!-- Cabeçalho -->

@@ -1,10 +1,10 @@
 <?php
 session_start();
 if (!isset($_SESSION['usuario_nivel'])) {
-    header('Location: login.php');
+    header('Location: ' . BASE_URL . '/login.php');
     exit;
 }
-require_once 'conexao.php';
+require_once __DIR__ . '/conexao.php';
 
 // API para buscar histórico de um cliente específico
 if (isset($_GET['acao']) && $_GET['acao'] === 'historico' && isset($_GET['id'])) {
@@ -42,8 +42,7 @@ $clientes = $stmt->fetchAll();
     </style>
 </head>
 <body>
-
-<?php require_once '_partials/menu.php'; ?>
+<?php require_once __DIR__ . '/_partials/menu.php'; ?>
 
 <div class="main-content">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -75,7 +74,7 @@ $clientes = $stmt->fetchAll();
                             </small>
                         </div>
                         <div class="text-end ms-2">
-                            <span class="badge bg-primary rounded-pill"><?php echo $c['total_servicos']; ?> serviços</span>
+                            <span class="badge bg-primary rounded-pill"><?php echo $c['total_servicos']; ?> OS</span>
                             <?php if($_SESSION['usuario_nivel'] === 'admin'): ?>
                                 <div class="text-success fw-bold small mt-1" style="font-size: 0.75rem;">R$ <?php echo number_format($c['total_gasto'], 2, ',', '.'); ?></div>
                             <?php endif; ?>
@@ -139,7 +138,7 @@ $clientes = $stmt->fetchAll();
             
             let html = '';
             if (servicos.length === 0) {
-                html = '<div class="alert alert-info text-center">Nenhum serviço encontrado.</div>';
+                html = '<div class="alert alert-info text-center">Nenhum atendimento encontrado.</div>';
             } else {
                 servicos.forEach(s => {
                     // Formata data

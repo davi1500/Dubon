@@ -2,12 +2,18 @@
 session_start();
 $erro = '';
 
+// Lógica de Logout
+if (isset($_GET['acao']) && $_GET['acao'] === 'sair') {
+    session_destroy();
+    header('Location: ' . BASE_URL . '/login.php');
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $usuario = $_POST['usuario'] ?? '';
     $senha = $_POST['senha'] ?? '';
 
-    require_once 'conexao.php';
-    $loginSucesso = false;
+    require_once __DIR__ . '/conexao.php';
 
     // Consulta segura usando Prepared Statements (Previne SQL Injection)
     $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE usuario = :usuario LIMIT 1");
@@ -18,12 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['usuario_id'] = $u['id'];
             $_SESSION['usuario_nome'] = $u['nome'];
             $_SESSION['usuario_nivel'] = $u['nivel'];
-            $loginSucesso = true;
-    }
-
-    if ($loginSucesso) {
-        header('Location: index.php');
-        exit;
+            
+            header('Location: ' . BASE_URL . '/');
+            exit;
     } else {
         $erro = 'Usuário ou senha incorretos.';
     }

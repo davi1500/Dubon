@@ -6,8 +6,8 @@ if (session_status() === PHP_SESSION_NONE) {
 $nivel_acesso = $_SESSION['usuario_nivel'] ?? '';
 $nome_usuario = $_SESSION['usuario_nome'] ?? 'Usuário';
 
-// Pega o nome do arquivo atual para o menu 'active'
-$pagina_atual = basename($_SERVER['PHP_SELF']);
+// Pega a URI atual para o menu 'active'
+$uri = $_SERVER['REQUEST_URI'];
 ?>
 <style>
     /* Estilos para o menu lateral e conteúdo principal */
@@ -99,12 +99,12 @@ $pagina_atual = basename($_SERVER['PHP_SELF']);
 
     <ul class="nav flex-column flex-grow-1">
         <li class="nav-item">
-            <a class="nav-link <?php echo $pagina_atual == 'index.php' ? 'active' : ''; ?>" href="index.php">
-                <i class="bi bi-calendar-week"></i> Serviços
+            <a class="nav-link <?php echo ($uri == '/' || str_starts_with($uri, '/servicos')) ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/">
+                <i class="bi bi-file-earmark-text"></i> Ordens de Serviço
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link <?php echo $pagina_atual == 'clientes.php' ? 'active' : ''; ?>" href="clientes.php">
+            <a class="nav-link <?php echo str_starts_with($uri, '/clientes.php') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/clientes.php">
                 <i class="bi bi-people-fill"></i> Clientes
             </a>
         </li>
@@ -112,8 +112,8 @@ $pagina_atual = basename($_SERVER['PHP_SELF']);
         <?php if ($nivel_acesso === 'admin'): ?>
         <li class="nav-item mt-3"><h6 class="text-muted ps-3" style="font-size: 0.8rem;">ADMINISTRAÇÃO</h6></li>
         <li class="nav-item">
-            <a class="nav-link <?php echo $pagina_atual == 'catalogo.php' ? 'active' : ''; ?>" href="catalogo.php">
-                <i class="bi bi-graph-up-arrow"></i> Dashboard & Catálogo
+            <a class="nav-link <?php echo str_starts_with($uri, '/catalogo') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/catalogo">
+                <i class="bi bi-tags-fill"></i> Meus Serviços
             </a>
         </li>
         <?php endif; ?>
@@ -124,6 +124,6 @@ $pagina_atual = basename($_SERVER['PHP_SELF']);
             <i class="bi bi-person-circle"></i>
             <span><?php echo htmlspecialchars($nome_usuario); ?></span>
         </div>
-        <a href="login.php?acao=sair">Sair <i class="bi bi-box-arrow-right"></i></a>
+        <a href="<?php echo BASE_URL; ?>/login.php?acao=sair">Sair <i class="bi bi-box-arrow-right"></i></a>
     </div>
 </nav>

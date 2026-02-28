@@ -6,7 +6,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 // Carrega a conexão com o banco de dados que já temos.
-require 'conexao.php';
+require __DIR__ . '/conexao.php';
 
 /**
  * Função "Helper" para carregar uma View.
@@ -18,5 +18,5 @@ function view($name, $data = [])
     // Ex: $data['pageTitle'] vira a variável $pageTitle dentro da view
     extract($data);
 
-    return require "src/Views/{$name}.view.php";
+    return require __DIR__ . "/src/Views/{$name}.view.php";
 }

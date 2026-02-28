@@ -2,6 +2,9 @@
 // Define o fuso horário para o Brasil (evita horários errados no servidor)
 date_default_timezone_set('America/Sao_Paulo');
 
+// Define a pasta onde o sistema está instalado (vazio se for na raiz, ou '/pasta' se for subpasta)
+define('BASE_URL', '/dubon');
+
 // Configuração do Banco de Dados SQLite
 $db_file = __DIR__ . '/database.sqlite';
 $dsn = 'sqlite:' . $db_file;
@@ -32,6 +35,7 @@ try {
         data_servico DATE,
         status TEXT,
         valor_total DECIMAL(10,2),
+        desconto DECIMAL(10,2) DEFAULT 0,
         valor_pago DECIMAL(10,2),
         garantia INTEGER,
         obs TEXT,
@@ -66,6 +70,31 @@ try {
         // Coluna já existe, ignora o erro
     }
 
+    // Tenta adicionar a coluna desconto na tabela servicos (caso não exista)
+    try {
+        $pdo->exec("ALTER TABLE servicos ADD COLUMN desconto DECIMAL(10,2) DEFAULT 0");
+    } catch (Exception $e) {
+        // Coluna já existe
+    }
+
+    // 5. Tabela de Categorias
+    $pdo->exec("CREATE TABLE IF NOT EXISTS categorias (
+        id TEXT PRIMARY KEY,
+        nome TEXT NOT NULL,
+        icone_bootstrap TEXT,
+        icone_emoji TEXT
+    )");
+
+    // 6. Tabela de Catálogo de Serviços
+    $pdo->exec("CREATE TABLE IF NOT EXISTS catalogo (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        categoria_id TEXT,
+        custo DECIMAL(10,2),
+        valor DECIMAL(10,2),
+        FOREIGN KEY (categoria_id) REFERENCES categorias(id)
+    )");
+
     // --- MIGRAÇÃO AUTOMÁTICA DE CLIENTES ---
     // Se a tabela de clientes estiver vazia, popula com os nomes únicos dos serviços já existentes
     $pdo->exec("INSERT INTO clientes (nome) SELECT DISTINCT cliente FROM servicos WHERE cliente NOT IN (SELECT nome FROM clientes)");
@@ -75,6 +104,37 @@ try {
     $stmt = $pdo->query("SELECT COUNT(*) FROM usuarios");
     if ($stmt->fetchColumn() == 0) {
         $pdo->exec("INSERT INTO usuarios (usuario, senha, nivel, nome) VALUES ('admin', '123', 'admin', 'Administrador')");
+    }
+
+    // --- MIGRAÇÃO AUTOMÁTICA DE CATÁLOGO (JSON -> DB) ---
+    // Se a tabela de categorias estiver vazia, tenta importar do JSON antigo
+    $stmtCat = $pdo->query("SELECT COUNT(*) FROM categorias");
+    if ($stmtCat->fetchColumn() == 0) {
+        $jsonFile = __DIR__ . '/categorias.json';
+        if (file_exists($jsonFile)) {
+            $cats = json_decode(file_get_contents($jsonFile), true);
+            if ($cats) {
+                $stmt = $pdo->prepare("INSERT INTO categorias (id, nome, icone_bootstrap, icone_emoji) VALUES (?, ?, ?, ?)");
+                foreach ($cats as $c) {
+                    $stmt->execute([$c['id'], $c['nome'], $c['icone_bootstrap'], $c['icone_emoji']]);
+                }
+            }
+        }
+    }
+
+    // Se a tabela de catálogo estiver vazia, tenta importar do JSON antigo
+    $stmtCat = $pdo->query("SELECT COUNT(*) FROM catalogo");
+    if ($stmtCat->fetchColumn() == 0) {
+        $jsonFile = __DIR__ . '/catalogo.json';
+        if (file_exists($jsonFile)) {
+            $items = json_decode(file_get_contents($jsonFile), true);
+            if ($items) {
+                $stmt = $pdo->prepare("INSERT INTO catalogo (nome, categoria_id, custo, valor) VALUES (?, ?, ?, ?)");
+                foreach ($items as $i) {
+                    $stmt->execute([$i['nome'], $i['categoria'], $i['custo'], $i['valor']]);
+                }
+            }
+        }
     }
 
 } catch (PDOException $e) {

@@ -1,10 +1,10 @@
 <?php
 session_start();
 if (!isset($_SESSION['usuario_nivel'])) {
-    header('Location: login.php');
+    header('Location: /login.php');
     exit;
 }
-require_once 'conexao.php';
+require_once __DIR__ . '/conexao.php';
 
 if (!isset($_GET['id'])) {
     die("ID do serviço não fornecido.");
