@@ -1,6 +1,9 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # Redireciona todas as requisições que não são para arquivos ou diretórios existentes
+    # para o index.php, que é o nosso front-controller.
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule . index.php [L]
+    RewriteRule ^ index.php [L]
 </IfModule>
