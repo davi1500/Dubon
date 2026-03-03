@@ -1,3 +1,20 @@
+<?php
+// Cálculos para o dashboard
+$total_servicos = count($catalogo);
+$soma_venda = 0;
+$soma_lucro = 0;
+if ($total_servicos > 0) {
+    foreach ($catalogo as $item) {
+        $soma_venda += $item['valor'];
+        $soma_lucro += ($item['valor'] - $item['custo']);
+    }
+    $valor_medio = $soma_venda / $total_servicos;
+    $lucro_medio = $soma_lucro / $total_servicos;
+} else {
+    $valor_medio = 0;
+    $lucro_medio = 0;
+}
+?>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -24,6 +41,43 @@
         </div>
     </div>
 
+    <!-- Mini Dashboard -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <i class="bi bi-tags-fill fs-1 text-primary me-3"></i>
+                    <div>
+                        <h6 class="text-muted mb-1">Serviços Cadastrados</h6>
+                        <h4 class="fw-bold mb-0"><?php echo $total_servicos; ?></h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <i class="bi bi-cash-stack fs-1 text-info me-3"></i>
+                    <div>
+                        <h6 class="text-muted mb-1">Preço Médio de Venda</h6>
+                        <h4 class="fw-bold mb-0">R$ <?php echo number_format($valor_medio, 2, ',', '.'); ?></h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body d-flex align-items-center">
+                    <i class="bi bi-graph-up-arrow fs-1 text-success me-3"></i>
+                    <div>
+                        <h6 class="text-muted mb-1">Lucro Médio Estimado</h6>
+                        <h4 class="fw-bold mb-0">R$ <?php echo number_format($lucro_medio, 2, ',', '.'); ?></h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row">
         <!-- Coluna da Esquerda: Formulário e Lista -->
         <div class="col-12">
@@ -31,12 +85,12 @@
                 <div class="card-body px-4 pt-4">
                     
                     <!-- Formulário de Adição Rápida -->
-                    <form action="<?php echo BASE_URL; ?>/catalogo/salvar" method="POST" class="row g-2 mb-4 align-items-end p-3 bg-light rounded-3">
-                        <div class="col-md-4">
+                    <form action="<?php echo BASE_URL; ?>/catalogo/salvar" method="POST" class="row g-3 mb-4 align-items-end p-3 bg-light rounded-3">
+                        <div class="col-md-3">
                             <label class="form-label small fw-bold text-muted">Nome do Serviço</label>
                             <input type="text" name="nome" class="form-control" placeholder="Ex: Limpeza Split" required>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-2">
                             <label class="form-label small fw-bold text-muted">Categoria (Ícone)</label>
                             <select name="categoria_id" class="form-select">
                                 <?php foreach($categorias as $cat): ?>
@@ -54,10 +108,20 @@
                             <label class="form-label small fw-bold text-muted">Venda (R$)</label>
                             <input type="number" name="valor" class="form-control" placeholder="0,00" step="0.01">
                         </div>
+                        <div class="col-md-2">
+                            <label class="form-label small fw-bold text-muted">Garantia (dias)</label>
+                            <input type="number" name="garantia_dias" class="form-control" placeholder="90">
+                        </div>
                         <div class="col-md-1">
                             <button type="submit" class="btn btn-primary w-100"><i class="bi bi-plus-lg"></i></button>
                         </div>
                     </form>
+
+                    <!-- Barra de Busca -->
+                    <div class="input-group mb-3">
+                        <span class="input-group-text bg-white border-end-0"><i class="bi bi-search"></i></span>
+                        <input type="text" id="buscaServico" class="form-control border-start-0" placeholder="Buscar por nome do serviço...">
+                    </div>
 
                     <!-- Lista -->
                     <div class="table-responsive">
@@ -68,13 +132,14 @@
                                     <th>Serviço</th>
                                     <th>Custo</th>
                                     <th>Venda</th>
+                                    <th>Garantia</th>
                                     <th>Lucro Estimado</th>
                                     <th class="text-end">Ações</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody id="tabelaServicos">
                                 <?php if (empty($catalogo)): ?>
-                                    <tr><td colspan="6" class="text-center text-muted py-4">Nenhum serviço cadastrado.</td></tr>
+                                    <tr><td colspan="7" class="text-center text-muted py-4">Nenhum serviço cadastrado.</td></tr>
                                 <?php else: ?>
                                     <?php foreach($catalogo as $item): 
                                         $lucro = $item['valor'] - $item['custo'];
@@ -84,6 +149,7 @@
                                         <td class="fw-bold text-secondary"><?php echo htmlspecialchars($item['nome']); ?></td>
                                         <td class="text-danger">R$ <?php echo number_format($item['custo'], 2, ',', '.'); ?></td>
                                         <td class="text-dark">R$ <?php echo number_format($item['valor'], 2, ',', '.'); ?></td>
+                                        <td><?php echo ($item['garantia_dias'] ?? 0); ?> dias</td>
                                         <td class="text-success fw-bold">R$ <?php echo number_format($lucro, 2, ',', '.'); ?></td>
                                         <td class="text-end">
                                             <button class="btn btn-sm btn-outline-primary me-1" onclick='editarItem(<?php echo json_encode($item); ?>)'><i class="bi bi-pencil"></i></button>
@@ -127,9 +193,13 @@
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <div class="row g-2">
+                        <div class="row g-3">
                             <div class="col-6"><label class="form-label">Custo</label><input type="number" name="custo" id="editCusto" class="form-control" step="0.01"></div>
                             <div class="col-6"><label class="form-label">Venda</label><input type="number" name="valor" id="editValor" class="form-control" step="0.01"></div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="form-label">Garantia (dias)</label>
+                            <input type="number" name="garantia_dias" id="editGarantia" class="form-control bg-light">
                         </div>
                         <div class="mt-4 text-end">
                             <button type="button" class="btn btn-secondary rounded-3 me-2" data-bs-dismiss="modal">Cancelar</button>
@@ -150,10 +220,25 @@
         document.getElementById('editCategoria').value = item.categoria_id;
         document.getElementById('editCusto').value = item.custo;
         document.getElementById('editValor').value = item.valor;
+        document.getElementById('editGarantia').value = item.garantia_dias || 0;
         
         const modal = new bootstrap.Modal(document.getElementById('modalEditarItem'));
         modal.show();
     }
+
+    // Filtro de Busca
+    document.getElementById('buscaServico').addEventListener('input', function() {
+        const termo = this.value.toLowerCase();
+        document.querySelectorAll('#tabelaServicos tr').forEach(tr => {
+            // O nome do serviço está na segunda célula (índice 1)
+            const nomeServico = tr.cells[1].textContent.toLowerCase();
+            if (nomeServico.includes(termo)) {
+                tr.style.display = '';
+            } else {
+                tr.style.display = 'none';
+            }
+        });
+    });
 </script>
 </body>
 </html>

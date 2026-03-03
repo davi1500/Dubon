@@ -13,9 +13,9 @@ if (!isset($_GET['id'])) {
 $id = $_GET['id'];
 
 // Busca os dados do serviço e do cliente
-$stmt = $pdo->prepare("SELECT s.*, c.telefone, c.endereco 
+$stmt = $pdo->prepare("SELECT s.*, c.nome as nome_cliente_cadastrado, c.telefone, c.endereco, c.cpf, c.cnpj, c.razao_social
                        FROM servicos s 
-                       LEFT JOIN clientes c ON s.cliente_id = c.id 
+                       LEFT JOIN clientes c ON s.cliente_id = c.id
                        WHERE s.id = ?");
 $stmt->execute([$id]);
 $servico = $stmt->fetch();
@@ -35,8 +35,48 @@ $valorTotal = number_format($servico['valor_total'], 2, ',', '.');
 $valorPago = number_format($servico['valor_pago'], 2, ',', '.');
 $restante = number_format($servico['valor_total'] - $servico['valor_pago'], 2, ',', '.');
 
+// Busca as configurações da empresa
+$stmtConfig = $pdo->query("SELECT * FROM configuracoes");
+$config_raw = $stmtConfig->fetchAll(PDO::FETCH_KEY_PAIR);
+$config = array_merge([
+    'empresa_nome' => 'Dubom Refrigeração',
+    'empresa_cnpj' => '00.000.000/0001-00',
+    'empresa_telefone' => '(00) 90000-0000',
+    'empresa_email' => 'contato@suaempresa.com',
+    'empresa_slogan' => 'Slogan da sua empresa',
+    'empresa_logo' => ''
+], $config_raw);
+
 // Define o título do documento baseado no status
 $tituloDoc = ($servico['status'] == 'Pago') ? 'RECIBO DE PAGAMENTO' : 'ORDEM DE SERVIÇO';
+
+// --- Lógica para o WhatsApp ---
+$telefoneLimpo = '';
+if (!empty($servico['telefone'])) {
+    // Remove tudo que não for número
+    $telefoneLimpo = preg_replace('/[^0-9]/', '', $servico['telefone']);
+    // Adiciona o código do país (Brasil) se não tiver
+    if (strlen($telefoneLimpo) >= 10 && substr($telefoneLimpo, 0, 2) !== '55') {
+        $telefoneLimpo = '55' . $telefoneLimpo;
+    }
+}
+
+// Monta a mensagem para o WhatsApp
+$nomeCliente = htmlspecialchars($servico['nome_cliente_cadastrado'] ?? $servico['cliente']);
+$mensagemWpp = "Olá, *{$nomeCliente}*! 👋\n\n";
+$mensagemWpp .= "Segue o resumo da sua *{$tituloDoc} Nº {$id}* da Dubom Refrigeração:\n\n";
+
+foreach($itens as $item) {
+    $mensagemWpp .= "✅ " . $item['descricao'] . " (Qtd: " . $item['quantidade'] . ")\n";
+}
+if (empty($itens)) { // Fallback para OSs antigas
+    $mensagemWpp .= "✅ " . ($servico['obs'] ?: 'Serviço de Refrigeração') . "\n";
+}
+
+$mensagemWpp .= "\n*Valor Total: R$ {$valorTotal}*\n";
+$mensagemWpp .= "Garantia: " . ($servico['garantia'] ?: '0') . " dias\n\n";
+$mensagemWpp .= "Qualquer dúvida, estamos à disposição!";
+$linkWpp = "https://wa.me/{$telefoneLimpo}?text=" . urlencode($mensagemWpp);
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -45,6 +85,7 @@ $tituloDoc = ($servico['status'] == 'Pago') ? 'RECIBO DE PAGAMENTO' : 'ORDEM DE 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OS #<?php echo $id; ?> - Dubom</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body { background: #eee; font-family: 'Segoe UI', sans-serif; -webkit-print-color-adjust: exact; }
         .page { background: white; width: 21cm; min-height: 29.7cm; display: block; margin: 0 auto; padding: 2cm; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
@@ -62,20 +103,34 @@ $tituloDoc = ($servico['status'] == 'Pago') ? 'RECIBO DE PAGAMENTO' : 'ORDEM DE 
 </head>
 <body>
 
-<div class="container py-4 no-print text-center">
-    <button onclick="window.print()" class="btn btn-primary btn-lg shadow"><i class="bi bi-printer"></i> Imprimir / Salvar PDF</button>
-    <button onclick="window.close()" class="btn btn-secondary btn-lg shadow ms-2">Fechar</button>
+<div class="container py-4 no-print">
+    <div class="d-flex flex-wrap justify-content-center gap-2">
+        <button onclick="window.print()" class="btn btn-primary btn-lg shadow"><i class="bi bi-printer"></i> Imprimir / PDF</button>
+        <button onclick="sharePDF(this)" class="btn btn-danger btn-lg shadow"><i class="bi bi-share-fill"></i> Compartilhar PDF</button>
+        <?php if (!empty($telefoneLimpo)): ?>
+            <a href="<?php echo $linkWpp; ?>" target="_blank" class="btn btn-success btn-lg shadow">
+                <i class="bi bi-whatsapp"></i> Enviar via WhatsApp
+            </a>
+        <?php endif; ?>
+        <button onclick="window.close()" class="btn btn-secondary btn-lg shadow">Fechar</button>
+    </div>
 </div>
 
 <div class="page">
     <!-- Cabeçalho -->
     <div class="row align-items-center mb-4">
-        <div class="col-2 text-center logo-area">❄️</div>
+        <div class="col-2 text-center logo-area">
+            <?php if (!empty($config['empresa_logo']) && file_exists(__DIR__ . '/public' . $config['empresa_logo'])): ?>
+                <img src="<?php echo BASE_URL . $config['empresa_logo']; ?>" alt="Logo" style="max-width: 100%; max-height: 80px;">
+            <?php else: ?>
+                ❄️
+            <?php endif; ?>
+        </div>
         <div class="col-6">
-            <h2 class="fw-bold mb-0">Dubom Refrigeração</h2>
-            <small class="text-muted">CNPJ: 00.000.000/0001-00</small><br>
-            <small class="text-muted">Instalação e Manutenção de Ar Condicionado e Refrigeração</small><br>
-            <small class="text-muted">Contato: (XX) 99999-9999</small> <!-- Ajuste aqui o telefone da empresa -->
+            <h3 class="fw-bold mb-0"><?php echo htmlspecialchars($config['empresa_nome']); ?></h3>
+            <?php if (!empty($config['empresa_cnpj'])): ?><small class="text-muted d-block">CNPJ: <?php echo htmlspecialchars($config['empresa_cnpj']); ?></small><?php endif; ?>
+            <?php if (!empty($config['empresa_slogan'])): ?><small class="text-muted d-block"><?php echo htmlspecialchars($config['empresa_slogan']); ?></small><?php endif; ?>
+            <?php if (!empty($config['empresa_telefone'])): ?><small class="text-muted d-block">Contato: <?php echo htmlspecialchars($config['empresa_telefone']); ?> | <?php echo htmlspecialchars($config['empresa_email']); ?></small><?php endif; ?>
         </div>
         <div class="col-4 text-end">
             <h5 class="fw-bold text-secondary">Nº <?php echo $id; ?></h5>
@@ -88,9 +143,28 @@ $tituloDoc = ($servico['status'] == 'Pago') ? 'RECIBO DE PAGAMENTO' : 'ORDEM DE 
     <!-- Dados do Cliente -->
     <div class="box-info">
         <div class="row">
-            <div class="col-12 mb-2"><strong>Cliente:</strong> <?php echo $servico['cliente']; ?></div>
-            <div class="col-6"><strong>Telefone:</strong> <?php echo $servico['telefone'] ?? 'Não informado'; ?></div>
-            <div class="col-12 mt-2"><strong>Endereço:</strong> <?php echo $servico['endereco'] ?? 'Não informado'; ?></div>
+            <div class="col-md-8 mb-2">
+                <strong>Cliente:</strong> <?php echo htmlspecialchars($servico['nome_cliente_cadastrado'] ?? $servico['cliente']); ?>
+                <?php if (!empty($servico['razao_social'])): ?>
+                    <br><small class="text-muted">Razão Social: <?php echo htmlspecialchars($servico['razao_social']); ?></small>
+                <?php endif; ?>
+            </div>
+            <?php $documento = $servico['cpf'] ?: $servico['cnpj']; ?>
+            <?php if (!empty($documento)): ?>
+                <div class="col-md-4 mb-2">
+                    <strong>CPF/CNPJ:</strong> <?php echo htmlspecialchars($documento); ?>
+                </div>
+            <?php endif; ?>
+            <?php if (!empty($servico['endereco'])): ?>
+                <div class="col-md-8">
+                    <strong>Endereço:</strong> <?php echo htmlspecialchars($servico['endereco']); ?>
+                </div>
+            <?php endif; ?>
+            <?php if (!empty($servico['telefone'])): ?>
+                <div class="col-md-4">
+                    <strong>Telefone:</strong> <?php echo htmlspecialchars($servico['telefone']); ?>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -161,5 +235,40 @@ $tituloDoc = ($servico['status'] == 'Pago') ? 'RECIBO DE PAGAMENTO' : 'ORDEM DE 
     </div>
 </div>
 
+<script>
+    async function sharePDF(btn) {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando PDF...';
+        btn.disabled = true;
+
+        const element = document.querySelector('.page');
+        const opt = {
+            margin: 0,
+            filename: 'OS_<?php echo $id; ?>.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        try {
+            // Gera o PDF como um objeto Blob (arquivo em memória)
+            const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+            const file = new File([pdfBlob], `OS_<?php echo $id; ?>.pdf`, { type: 'application/pdf' });
+
+            // Tenta usar o compartilhamento nativo do celular (Android/iOS)
+            if (navigator.canShare && navigator.share) {
+                await navigator.share({ files: [file], title: 'Ordem de Serviço', text: 'Segue a OS em anexo.' });
+            } else {
+                // Se estiver no PC, apenas baixa o arquivo
+                const url = URL.createObjectURL(pdfBlob);
+                const a = document.createElement('a'); a.href = url; a.download = `OS_<?php echo $id; ?>.pdf`; a.click();
+            }
+        } catch (err) {
+            alert('Erro ao gerar PDF: ' + err.message);
+        } finally {
+            btn.innerHTML = originalText; btn.disabled = false;
+        }
+    }
+</script>
 </body>
 </html>

@@ -34,7 +34,7 @@ class Router
     {
         // Ajuste para subpasta: Remove o BASE_URL da URI se estiver presente
         $requestPath = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        if (defined('BASE_URL') && strpos($requestPath, BASE_URL) === 0) {
+        if (defined('BASE_URL') && BASE_URL !== '' && strpos($requestPath, BASE_URL) === 0) {
             $requestPath = substr($requestPath, strlen(BASE_URL));
         }
         $uri = trim($requestPath, '/');

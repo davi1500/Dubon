@@ -1,0 +1,38 @@
+[
+    {
+        "id": "ar_condicionado",
+        "nome": "Ar Cond.",
+        "icone_emoji": "💨",
+        "icone_bootstrap": "bi-fan"
+    },
+    {
+        "id": "refrigeracao",
+        "nome": "Geladeira",
+        "icone_emoji": "❄️",
+        "icone_bootstrap": "bi-snow2"
+    },
+    {
+        "id": "camara_fria",
+        "nome": "Câm. Fria",
+        "icone_emoji": "🏭",
+        "icone_bootstrap": "bi-building"
+    },
+    {
+        "id": "balcao",
+        "nome": "Balcão",
+        "icone_emoji": "🏪",
+        "icone_bootstrap": "bi-shop"
+    },
+    {
+        "id": "maquina_lavar",
+        "nome": "Lavadora",
+        "icone_emoji": "💧",
+        "icone_bootstrap": "bi-droplet-fill"
+    },
+    {
+        "id": "outros",
+        "nome": "Geral",
+        "icone_emoji": "🛠️",
+        "icone_bootstrap": "bi-tools"
+    }
+]

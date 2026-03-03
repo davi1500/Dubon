@@ -1,5 +1,5 @@
 RewriteEngine On
-RewriteBase /dubon/
+RewriteBase /
 
 # 1. Segurança: Bloqueia o download do banco de dados pelo navegador
 <Files "database.sqlite">
@@ -8,7 +8,7 @@ RewriteBase /dubon/
 </Files>
 
 # 2. Se a requisição for para um arquivo que existe na pasta public (CSS, JS), serve ele
-RewriteCond %{DOCUMENT_ROOT}/dubon/public/$1 -f
+RewriteCond %{DOCUMENT_ROOT}/public/$1 -f
 RewriteRule ^(.*)$ public/$1 [L]
 
 # 3. Se a requisição for para um arquivo que existe na raiz (login.php, clientes.php), serve ele

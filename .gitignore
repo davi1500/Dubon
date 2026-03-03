@@ -1,15 +1,13 @@
-# Arquivo de banco de dados. NUNCA versionar o banco de dados de produção!
+# Arquivo de banco de dados SQLite
 database.sqlite
+database.sqlite-journal
 
-# Arquivos de log
-*.log
+# Arquivos de upload (logos, etc)
+/public/uploads/
 
-# Arquivo de inicialização local
-iniciar.bat
+# Arquivos de configuração local (se houver no futuro)
+.env
 
-# Arquivos JSON antigos que foram migrados para o banco de dados.
-# Não precisamos mais deles no controle de versão.
-servicos.json
-usuarios.json
-catalogo.json
-categorias.json
+# Arquivos de IDE (opcional, mas boa prática)
+.vscode/
+.idea/

@@ -33,16 +33,17 @@ class CatalogoController
             $categoria_id = $_POST['categoria_id'] ?? 'outros';
             $custo = str_replace(',', '.', $_POST['custo'] ?? 0);
             $valor = str_replace(',', '.', $_POST['valor'] ?? 0);
+            $garantia_dias = $_POST['garantia_dias'] ?? 0;
             $id = $_POST['id'] ?? null;
 
             if ($id) {
                 // Atualizar existente
-                $stmt = $pdo->prepare("UPDATE catalogo SET nome = ?, categoria_id = ?, custo = ?, valor = ? WHERE id = ?");
-                $stmt->execute([$nome, $categoria_id, $custo, $valor, $id]);
+                $stmt = $pdo->prepare("UPDATE catalogo SET nome = ?, categoria_id = ?, custo = ?, valor = ?, garantia_dias = ? WHERE id = ?");
+                $stmt->execute([$nome, $categoria_id, $custo, $valor, $garantia_dias, $id]);
             } else {
                 // Criar novo
-                $stmt = $pdo->prepare("INSERT INTO catalogo (nome, categoria_id, custo, valor) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$nome, $categoria_id, $custo, $valor]);
+                $stmt = $pdo->prepare("INSERT INTO catalogo (nome, categoria_id, custo, valor, garantia_dias) VALUES (?, ?, ?, ?, ?)");
+                $stmt->execute([$nome, $categoria_id, $custo, $valor, $garantia_dias]);
             }
             
             header('Location: ' . BASE_URL . '/catalogo');

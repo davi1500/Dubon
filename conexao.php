@@ -3,7 +3,7 @@
 date_default_timezone_set('America/Sao_Paulo');
 
 // Define a pasta onde o sistema está instalado (vazio se for na raiz, ou '/pasta' se for subpasta)
-define('BASE_URL', '/dubon');
+define('BASE_URL', '');
 
 // Configuração do Banco de Dados SQLite
 $db_file = __DIR__ . '/database.sqlite';
@@ -62,6 +62,17 @@ try {
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )");
 
+    // Atualização de Schema para Clientes (Novos Campos)
+    // Tenta adicionar as colunas caso elas não existam
+    $novas_colunas = ['cpf', 'cnpj', 'razao_social'];
+    foreach ($novas_colunas as $col) {
+        try {
+            $pdo->exec("ALTER TABLE clientes ADD COLUMN $col TEXT");
+        } catch (Exception $e) {
+            // Coluna já existe, segue o baile
+        }
+    }
+
     // Tenta adicionar a coluna cliente_id na tabela servicos (caso não exista)
     // Isso conecta o serviço ao cadastro do cliente
     try {
@@ -94,6 +105,13 @@ try {
         valor DECIMAL(10,2),
         FOREIGN KEY (categoria_id) REFERENCES categorias(id)
     )");
+
+    // Tenta adicionar a coluna de garantia no catalogo
+    try {
+        $pdo->exec("ALTER TABLE catalogo ADD COLUMN garantia_dias INTEGER DEFAULT 0");
+    } catch (Exception $e) {
+        // Coluna já existe
+    }
 
     // --- MIGRAÇÃO AUTOMÁTICA DE CLIENTES ---
     // Se a tabela de clientes estiver vazia, popula com os nomes únicos dos serviços já existentes
@@ -136,6 +154,45 @@ try {
             }
         }
     }
+
+    // 7. Tabela de Fornecedores
+    $pdo->exec("CREATE TABLE IF NOT EXISTS fornecedores (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        contato TEXT,
+        telefone TEXT,
+        email TEXT,
+        endereco TEXT
+    )");
+
+    // 8. Tabela de Produtos (Estoque/Peças)
+    $pdo->exec("CREATE TABLE IF NOT EXISTS produtos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        descricao TEXT,
+        preco_custo DECIMAL(10,2),
+        preco_venda DECIMAL(10,2),
+        estoque INTEGER DEFAULT 0,
+        fornecedor_id INTEGER,
+        FOREIGN KEY (fornecedor_id) REFERENCES fornecedores(id)
+    )");
+
+    // 9. Tabela de Configurações da Empresa
+    $pdo->exec("CREATE TABLE IF NOT EXISTS configuracoes (
+        chave TEXT PRIMARY KEY,
+        valor TEXT
+    )");
+
+    // 10. Tabela de Ligação Serviços <-> Produtos (Peças usadas na OS)
+    $pdo->exec("CREATE TABLE IF NOT EXISTS servicos_produtos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        servico_id INTEGER NOT NULL,
+        produto_id INTEGER NOT NULL,
+        quantidade DECIMAL(10,2) DEFAULT 1,
+        preco_venda DECIMAL(10,2),
+        FOREIGN KEY (servico_id) REFERENCES servicos(id) ON DELETE CASCADE,
+        FOREIGN KEY (produto_id) REFERENCES produtos(id)
+    )");
 
 } catch (PDOException $e) {
     die("Erro crítico no banco de dados: " . $e->getMessage());

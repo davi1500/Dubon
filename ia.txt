@@ -3,53 +3,42 @@ PROJETO: Sistema de Gestão - Dubom Refrigeração
 DATA DA ÚLTIMA ATUALIZAÇÃO: Março 2026
 
 --- TECNOLOGIAS ---
-- Backend: PHP Puro (Arquitetura Híbrida: MVC Básico + Arquivos Legados).
+- Backend: PHP Puro (Arquitetura Híbrida: MVC Básico + Arquivos Legados em migração).
 - Database: SQLite (Consolidado).
 - Frontend: HTML5, Bootstrap 5, JavaScript (Vanilla).
 - Autenticação: Sessão PHP com controle de nível de acesso (Admin/Funcionário).
 - Versionamento & Deploy: Git, GitHub e Hostinger (Deploy via Git).
 
---- ARQUIVOS PRINCIPAIS ---
-1. public/index.php: 
-   - Ponto de entrada único (Front Controller) da nova estrutura MVC.
-   - Carrega bootstrap e roteador.
-2. src/Controllers/HomeController.php:
-   - Gerencia a página inicial, listagem de serviços e dashboard.
-   - Processa a criação de novos serviços (POST).
-3. src/Views/index.view.php:
-   - View principal com listagem, dashboard e modal de novo serviço.
-4. catalogo.php (Legado):
-   - Área restrita ao Admin.
-   - Gerencia preços sugeridos e custos (ainda usa JSON para catálogo).
-   - Exibe dashboard de inteligência (Lucro vs Faturamento).
-5. login.php (Legado): Porta de entrada e autenticação.
-6. clientes.php (Legado): Gestão de base de clientes e histórico.
-7. conexao.php: Configuração do SQLite e Migrations automáticas.
-8. gerar_os.php (Legado): Gerador de PDF/Impressão de Ordem de Serviço e Recibos.
+--- ARQUIVOS PRINCIPAIS (MVC) ---
+1. src/Controllers/HomeController.php: Dashboard, Kanban de OS e Criação de Serviços.
+2. src/Controllers/ClienteController.php: Gestão de Clientes (CRUD).
+3. src/Controllers/ProdutoController.php: Gestão de Estoque e Peças.
+4. src/Controllers/FornecedorController.php: Gestão de Fornecedores.
+5. src/Controllers/UsuarioController.php: Gestão de Acesso e Equipe.
+6. src/Controllers/CatalogoController.php: Gestão de Serviços e Preços Padrão.
+7. src/Views/*.view.php: Views correspondentes aos controladores acima.
+
+--- ARQUIVOS DE SUPORTE ---
+1. public/index.php: Front Controller.
+2. src/Router.php: Roteador simples (Regex).
+3. conexao.php: Configuração do Banco de Dados e Migrations Automáticas.
+4. gerar_os.php (Legado): Gerador de PDF/Impressão.
 
 --- REGRAS DE NEGÓCIO IMPLEMENTADAS ---
 
 1. NÍVEIS DE ACESSO (RBAC):
-   - Admin: Acesso total. Vê valores (R$), Dashboard financeiro, Botão de Excluir, Edita Catálogo.
-   - Funcionário: Acesso restrito. Não vê totais no topo.
+   - Admin: Acesso total (Financeiro, Usuários, Fornecedores, Exclusão).
+   - Funcionário: Acesso operacional (Visualizar/Criar OS, Clientes).
 
-2. CATEGORIZAÇÃO E ÍCONES:
-   - O sistema não exige seleção manual de ícones o tempo todo.
-   - Lógica "adivinharCategoria(texto)": Lê a descrição (ex: "Split", "Geladeira") e define o ícone automaticamente.
-   - Catálogo: Ao selecionar um item do catálogo, o ícone e a categoria já vêm preenchidos.
+2. FLUXO DE CAIXA E ESTOQUE:
+   - Produtos: Controle de quantidade e preço de custo/venda.
+   - Serviços: Composição de valor (Mão de Obra + Peças).
+   - Financeiro: Status de pagamento (Pendente/Pago) e cálculo de lucro estimado.
 
-3. FINANCEIRO E PAGAMENTOS PARCIAIS:
-   - Estrutura: Valor Total (R$) | Valor Recebido (R$) | Restante (Calculado).
-   - Status "Pago": Ao selecionar, o sistema preenche automaticamente o Valor Recebido com o Total.
-   - Dashboard: O card "Faturamento" soma apenas o campo "valor_pago", garantindo realidade de caixa.
-
-4. UX/UI (RESPONSIVIDADE):
-   - Menu Lateral Fixo: Navegação unificada entre páginas novas e legadas.
-   - Mobile First: Inputs de descrição ocupam linha inteira em telas pequenas.
-   - Separadores de Data: Estilo visual (Hoje, Ontem, Data) na lista.
-   - Autocomplete: Sugere clientes e serviços (com preços) enquanto digita.
-   - Logística: Integração visual com Google Maps/Waze através do cadastro de endereços.
-   - Documentação: Geração automática de OS/Recibo em layout A4 para envio via WhatsApp/Impressão.
+3. UX/UI (AGILIDADE):
+   - Autocomplete Inteligente: Sugere clientes e serviços ao digitar.
+   - Cadastro Rápido: Se o cliente não existe na criação da OS, ele é criado automaticamente pelo nome.
+   - Kanban: Visualização de status por colunas (Agendado -> Em Andamento -> Concluído -> Pago).
 
 --- CONTEXTO DA EMPRESA (PERSONA) ---
 - Equipe: Cresceu para 4 pessoas. O dono (Pai) não trabalha mais sozinho.
@@ -57,19 +46,18 @@ DATA DA ÚLTIMA ATUALIZAÇÃO: Março 2026
 - Comunicação Atual: O dono envia áudios no WhatsApp explicando o serviço e valor. Funciona pela confiança, mas o objetivo é profissionalizar com Recibos/OS formais.
 - Futuro: Venda de peças e controle de estoque/despesas.
 
---- ESTRUTURA DE DADOS (JSON) ---
-Objeto Serviço:
-{
-  "id": integer (PK),
-  "cliente": string (Legado),
-  "cliente_id": integer (FK),
-  "valor_total": decimal,
-  "valor_pago": decimal,
-  "status": string
-}
+--- ESTRUTURA DE DADOS (SQLite) ---
+Principais Tabelas:
+- servicos (OS, Status, Valores)
+- servicos_itens (Detalhes da OS)
+- clientes (Dados PF/PJ)
+- produtos (Estoque)
+- fornecedores (Parceiros)
+- usuarios (Login)
+- catalogo (Preços padrão de serviços)
 
 --- PRÓXIMOS PASSOS (TODO LIST) ---
-1. Controle de Despesas: Criar tabela e interface para lançar gastos (gasolina, almoço) e abater do lucro no Dashboard.
+1. Controle de Despesas Operacionais: Lançar gastos avulsos (combustível, alimentação) para DRE completa.
 2. Botão WhatsApp: Link direto nos cards para enviar mensagem/OS pré-formatada.
-3. Gestão de Usuários: Interface para o Admin cadastrar/remover logins da equipe (CRUD Usuários).
-4. Personalização Visual: Inserir logotipo real (imagem) na OS e ajustar telefone de contato.
+3. Relatórios Avançados: Gráficos de desempenho por técnico e por período.
+4. Personalização Visual: Inserir logotipo real na impressão da OS.

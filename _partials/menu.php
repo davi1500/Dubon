@@ -33,6 +33,26 @@ $uri = $_SERVER['REQUEST_URI'];
         transition: transform 0.3s ease;
         z-index: 1030;
     }
+    /* Mobile Styles */
+    @media (max-width: 768px) {
+        .sidebar {
+            transform: translateX(-100%);
+            z-index: 1070; /* Fica acima de tudo quando aberto */
+        }
+        .sidebar.show {
+            transform: translateX(0);
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+        .main-content {
+            margin-left: 0 !important;
+            width: 100% !important;
+            padding-top: 5rem !important; /* Espaço para o botão do menu */
+        }
+        .menu-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1060; display: none;
+        }
+        .menu-overlay.show { display: block; }
+    }
     .main-content {
         margin-left: var(--sidebar-width);
         transition: margin-left 0.3s ease;
@@ -92,6 +112,12 @@ $uri = $_SERVER['REQUEST_URI'];
     }
 </style>
 
+<!-- Botão Mobile e Overlay -->
+<button class="btn btn-primary d-md-none position-fixed top-0 start-0 m-3 shadow" style="z-index: 1080;" onclick="toggleMenu()">
+    <i class="bi bi-list fs-4"></i>
+</button>
+<div class="menu-overlay" id="menuOverlay" onclick="toggleMenu()"></div>
+
 <nav class="sidebar" id="sidebar">
     <div class="sidebar-header">
         <h3><i class="bi bi-snow2"></i> Dubom</h3>
@@ -104,7 +130,7 @@ $uri = $_SERVER['REQUEST_URI'];
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link <?php echo str_starts_with($uri, '/clientes.php') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/clientes.php">
+            <a class="nav-link <?php echo str_starts_with($uri, '/clientes') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/clientes">
                 <i class="bi bi-people-fill"></i> Clientes
             </a>
         </li>
@@ -114,6 +140,26 @@ $uri = $_SERVER['REQUEST_URI'];
         <li class="nav-item">
             <a class="nav-link <?php echo str_starts_with($uri, '/catalogo') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/catalogo">
                 <i class="bi bi-tags-fill"></i> Meus Serviços
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo str_starts_with($uri, '/produtos') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/produtos">
+                <i class="bi bi-box-seam"></i> Produtos
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo str_starts_with($uri, '/fornecedores') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/fornecedores">
+                <i class="bi bi-truck"></i> Fornecedores
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo str_starts_with($uri, '/usuarios') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/usuarios">
+                <i class="bi bi-person-badge-fill"></i> Equipe
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo str_starts_with($uri, '/empresa') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/empresa">
+                <i class="bi bi-building-gear"></i> Minha Empresa
             </a>
         </li>
         <?php endif; ?>
@@ -127,3 +173,10 @@ $uri = $_SERVER['REQUEST_URI'];
         <a href="<?php echo BASE_URL; ?>/login.php?acao=sair">Sair <i class="bi bi-box-arrow-right"></i></a>
     </div>
 </nav>
+
+<script>
+    function toggleMenu() {
+        document.getElementById('sidebar').classList.toggle('show');
+        document.getElementById('menuOverlay').classList.toggle('show');
+    }
+</script>
