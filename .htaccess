@@ -1,19 +1,11 @@
-RewriteEngine On
-RewriteBase /
+<IfModule mod_rewrite.c>
+    RewriteEngine On
 
-# 1. Segurança: Bloqueia o download do banco de dados pelo navegador
-<Files "database.sqlite">
-    Order allow,deny
-    Deny from all
-</Files>
+    # 1. Se acessar a raiz do site (/dubon/), redireciona internamente para a pasta public
+    RewriteRule ^$ public/ [L]
 
-# 2. Se a requisição for para um arquivo que existe na pasta public (CSS, JS), serve ele
-RewriteCond %{DOCUMENT_ROOT}/public/$1 -f
-RewriteRule ^(.*)$ public/$1 [L]
-
-# 3. Se a requisição for para um arquivo que existe na raiz (login.php, clientes.php), serve ele
-RewriteCond %{REQUEST_FILENAME} -f
-RewriteRule ^ - [L]
-
-# 4. Todo o resto vai para o public/index.php (Onde está o seu sistema novo MVC)
-RewriteRule ^(.*)$ public/index.php [QSA,L]
+    # 2. Se o arquivo ou pasta NÃO existir na raiz (ex: /dubon/clientes), manda para public
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
