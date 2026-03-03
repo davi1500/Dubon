@@ -1,5 +1,7 @@
 <?php
 session_start();
+// Carrega as configurações (BASE_URL) logo no início para funcionar no logout
+require_once __DIR__ . '/conexao.php';
 $erro = '';
 
 // Lógica de Logout
@@ -12,8 +14,6 @@ if (isset($_GET['acao']) && $_GET['acao'] === 'sair') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $usuario = $_POST['usuario'] ?? '';
     $senha = $_POST['senha'] ?? '';
-
-    require_once __DIR__ . '/conexao.php';
 
     // Consulta segura usando Prepared Statements (Previne SQL Injection)
     $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE usuario = :usuario LIMIT 1");
