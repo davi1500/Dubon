@@ -198,4 +198,3 @@ try {
 } catch (PDOException $e) {
     die("Erro crítico no banco de dados: " . $e->getMessage());
 }
-?>
