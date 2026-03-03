@@ -1,6 +1,5 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /dubon/public/
 
     # Redireciona todas as requisições que não são para arquivos ou diretórios existentes
     # para o index.php, que é o nosso front-controller.

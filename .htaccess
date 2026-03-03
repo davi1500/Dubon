@@ -1,9 +1,8 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
-    RewriteBase /dubon/
 
     # 1. Se acessar a raiz do site (/dubon/), redireciona internamente para a pasta public
-    RewriteRule ^$ public/index.php [L]
+    RewriteRule ^$ public/ [L]
 
     # 2. Se o arquivo ou pasta NÃO existir na raiz (ex: /dubon/clientes), manda para public
     RewriteCond %{REQUEST_FILENAME} !-f

@@ -2,9 +2,9 @@
 // Define o fuso horário para o Brasil (evita horários errados no servidor)
 date_default_timezone_set('America/Sao_Paulo');
 
-// Define a pasta onde o sistema está instalado.
-// Vazio ('') se for na raiz do domínio, ou '/nome_da_pasta' se for em uma subpasta.
-define('BASE_URL', '/dubon');
+// Define a URL base do sistema.
+// Vazio ('') se estiver na raiz do domínio.
+define('BASE_URL', '');
 
 // Configuração do Banco de Dados SQLite
 $db_file = __DIR__ . '/database.sqlite';
