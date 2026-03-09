@@ -62,7 +62,7 @@
     <!-- Lista de Clientes -->
     <div class="row g-3" id="listaClientes">
         <?php foreach($clientes as $c): ?>
-            <div class="col-md-6 col-lg-4 item-cliente" data-nome="<?php echo strtolower(htmlspecialchars($c['nome'])); ?>" data-tel="<?php echo htmlspecialchars($c['telefone']); ?>">
+            <div class="col-md-6 col-lg-4 item-cliente" data-nome="<?php echo strtolower(htmlspecialchars($c['nome'])); ?>" data-tel="<?php echo htmlspecialchars($c['telefone'] ?? ''); ?>">
                 <div class="card card-cliente bg-white h-100 shadow-sm">
                     <div class="card-body p-3" onclick="verHistorico(<?php echo $c['id']; ?>, '<?php echo addslashes(htmlspecialchars($c['nome'])); ?>')">
                         <div class="d-flex align-items-center">
@@ -72,13 +72,13 @@
                             <div class="flex-grow-1 overflow-hidden">
                                 <h6 class="fw-bold mb-0 text-truncate"><?php echo htmlspecialchars($c['nome']); ?></h6>
                                 <small class="text-muted d-block">
-                                    <i class="bi bi-telephone"></i> <?php echo $c['telefone'] ? htmlspecialchars($c['telefone']) : 'Sem telefone'; ?>
+                                    <i class="bi bi-telephone"></i> <?php echo !empty($c['telefone']) ? htmlspecialchars($c['telefone']) : 'Sem telefone'; ?>
                                 </small>
                                 <small class="text-muted d-block text-truncate">
-                                    <i class="bi bi-geo-alt"></i> <?php echo $c['endereco'] ? htmlspecialchars($c['endereco']) : 'Sem endereço'; ?>
+                                    <i class="bi bi-geo-alt"></i> <?php echo !empty($c['endereco']) ? htmlspecialchars($c['endereco']) : 'Sem endereço'; ?>
                                 </small>
                                 <small class="text-muted d-block text-truncate">
-                                    <i class="bi bi-envelope"></i> <?php echo $c['email'] ? htmlspecialchars($c['email']) : 'Sem email'; ?>
+                                    <i class="bi bi-envelope"></i> <?php echo !empty($c['email']) ? htmlspecialchars($c['email']) : 'Sem email'; ?>
                                 </small>
                             </div>
                             <div class="text-end ms-2">

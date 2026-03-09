@@ -61,6 +61,17 @@ try {
         email TEXT
     )");
 
+    // Atualização de Schema para Clientes (Novos Campos)
+    // Garante que as colunas existam mesmo se a tabela já foi criada anteriormente
+    $cols_clientes = ['cpf', 'cnpj', 'razao_social', 'email'];
+    foreach ($cols_clientes as $col) {
+        try {
+            $pdo->exec("ALTER TABLE clientes ADD COLUMN $col TEXT");
+        } catch (Exception $e) {
+            // Coluna já existe, ignora o erro
+        }
+    }
+
     // 5. Tabela de Categorias
     $pdo->exec("CREATE TABLE IF NOT EXISTS categorias (
         id TEXT PRIMARY KEY,
