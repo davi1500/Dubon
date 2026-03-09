@@ -6,11 +6,33 @@
     <title>Produtos e Estoque - Dubom</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <?php
+        // Favicon Dinâmico
+        $favicon = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>❄️</text></svg>";
+        if (isset($pdo)) {
+            $stmtFav = $pdo->query("SELECT valor FROM configuracoes WHERE chave = 'empresa_logo'");
+            $logoPath = $stmtFav->fetchColumn();
+            if ($logoPath && file_exists(__DIR__ . '/../../public' . $logoPath)) {
+                $favicon = BASE_URL . $logoPath;
+            }
+        }
+    ?>
+    <link rel="icon" href="<?php echo $favicon; ?>">
     <style>body { background-color: #eef2f6; }</style>
 </head>
 <body>
 <?php require_once __DIR__ . '/../../_partials/menu.php'; ?>
 <div class="main-content">
+    <?php
+    if (isset($_SESSION['flash_message'])) {
+        $flash = $_SESSION['flash_message'];
+        unset($_SESSION['flash_message']);
+        echo "<div class='alert alert-{$flash['type']} alert-dismissible fade show' role='alert'>
+                {$flash['message']}
+                <button type='button' class='btn-close' data-bs-dismiss='alert' aria-label='Close'></button>
+              </div>";
+    }
+    ?>
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h3 class="fw-bold text-primary mb-0"><i class="bi bi-box-seam"></i> Produtos</h3>

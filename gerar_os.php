@@ -10,7 +10,8 @@ if (!isset($_GET['id'])) {
     die("ID do serviço não fornecido.");
 }
 
-$id = $_GET['id'];
+$id = (int)$_GET['id']; // Cast to integer to prevent SQL injection and other attacks.
+$safe_id = htmlspecialchars($id, ENT_QUOTES, 'UTF-8'); // Sanitize for HTML output
 
 // Busca os dados do serviço e do cliente
 $stmt = $pdo->prepare("SELECT s.*, c.nome as nome_cliente_cadastrado, c.telefone, c.endereco, c.cpf, c.cnpj, c.razao_social
@@ -83,8 +84,15 @@ $linkWpp = "https://wa.me/{$telefoneLimpo}?text=" . urlencode($mensagemWpp);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OS #<?php echo $id; ?> - Dubom</title>
+    <title>OS #<?php echo $safe_id; ?> - Dubom</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <?php
+        $favicon = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>❄️</text></svg>";
+        if (!empty($config['empresa_logo']) && file_exists(__DIR__ . '/public' . $config['empresa_logo'])) {
+            $favicon = BASE_URL . $config['empresa_logo'];
+        }
+    ?>
+    <link rel="icon" href="<?php echo $favicon; ?>">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body { background: #eee; font-family: 'Segoe UI', sans-serif; -webkit-print-color-adjust: exact; }
@@ -133,7 +141,7 @@ $linkWpp = "https://wa.me/{$telefoneLimpo}?text=" . urlencode($mensagemWpp);
             <?php if (!empty($config['empresa_telefone'])): ?><small class="text-muted d-block">Contato: <?php echo htmlspecialchars($config['empresa_telefone']); ?> | <?php echo htmlspecialchars($config['empresa_email']); ?></small><?php endif; ?>
         </div>
         <div class="col-4 text-end">
-            <h5 class="fw-bold text-secondary">Nº <?php echo $id; ?></h5>
+            <h5 class="fw-bold text-secondary">Nº <?php echo $safe_id; ?></h5>
             <small>Data: <?php echo $dataServico; ?></small>
         </div>
     </div>
@@ -244,7 +252,7 @@ $linkWpp = "https://wa.me/{$telefoneLimpo}?text=" . urlencode($mensagemWpp);
         const element = document.querySelector('.page');
         const opt = {
             margin: 0,
-            filename: 'OS_<?php echo $id; ?>.pdf',
+            filename: 'OS_<?php echo $safe_id; ?>.pdf',
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: { scale: 2, useCORS: true },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -253,7 +261,7 @@ $linkWpp = "https://wa.me/{$telefoneLimpo}?text=" . urlencode($mensagemWpp);
         try {
             // Gera o PDF como um objeto Blob (arquivo em memória)
             const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
-            const file = new File([pdfBlob], `OS_<?php echo $id; ?>.pdf`, { type: 'application/pdf' });
+            const file = new File([pdfBlob], `OS_<?php echo $safe_id; ?>.pdf`, { type: 'application/pdf' });
 
             // Tenta usar o compartilhamento nativo do celular (Android/iOS)
             if (navigator.canShare && navigator.share) {
@@ -261,7 +269,7 @@ $linkWpp = "https://wa.me/{$telefoneLimpo}?text=" . urlencode($mensagemWpp);
             } else {
                 // Se estiver no PC, apenas baixa o arquivo
                 const url = URL.createObjectURL(pdfBlob);
-                const a = document.createElement('a'); a.href = url; a.download = `OS_<?php echo $id; ?>.pdf`; a.click();
+                const a = document.createElement('a'); a.href = url; a.download = `OS_<?php echo $safe_id; ?>.pdf`; a.click();
             }
         } catch (err) {
             alert('Erro ao gerar PDF: ' + err.message);

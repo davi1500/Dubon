@@ -11,6 +11,18 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
     <title><?php echo $page_title; ?> - Dubom</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <?php
+        // Favicon Dinâmico
+        $favicon = "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>❄️</text></svg>";
+        if (isset($pdo)) {
+            $stmtFav = $pdo->query("SELECT valor FROM configuracoes WHERE chave = 'empresa_logo'");
+            $logoPath = $stmtFav->fetchColumn();
+            if ($logoPath && file_exists(__DIR__ . '/../../public' . $logoPath)) {
+                $favicon = BASE_URL . $logoPath;
+            }
+        }
+    ?>
+    <link rel="icon" href="<?php echo $favicon; ?>">
     <style>
         /* Estilo para a lista de sugestões */
         .sugestoes-lista { position: absolute; z-index: 1000; width: 95%; max-height: 200px; overflow-y: auto; display: none; }
@@ -27,7 +39,12 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
 <div class="main-content">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold text-primary mb-0"><i class="bi <?php echo $is_edit ? 'bi-pencil-square' : 'bi-plus-circle'; ?>"></i> <?php echo $page_title; ?></h3>
-        <a href="<?php echo BASE_URL; ?>/" class="btn btn-outline-secondary rounded-pill px-4">Cancelar</a>
+        <div>
+            <?php if($is_edit): ?>
+                <a href="<?php echo BASE_URL; ?>/servicos/visualizar/<?php echo $servico['id']; ?>" class="btn btn-outline-primary rounded-pill px-4 me-2"><i class="bi bi-printer"></i> Visualizar / Imprimir</a>
+            <?php endif; ?>
+            <a href="<?php echo BASE_URL; ?>/" class="btn btn-outline-secondary rounded-pill px-4">Cancelar</a>
+        </div>
     </div>
 
     <form action="<?php echo $form_action; ?>" method="POST" class="card border-0 shadow-sm p-4 rounded-4">
@@ -38,6 +55,13 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
                 <label class="form-label fw-bold">Cliente</label>
                 <input type="text" name="cliente_nome" id="inputCliente" class="form-control form-control-lg bg-light border-0" placeholder="Digite o nome ou selecione..." value="<?php echo $is_edit ? htmlspecialchars($servico['cliente']) : ''; ?>" required autocomplete="off" oninput="mostrarSugestoesCliente(this)">
                 <ul class="list-group sugestoes-lista shadow" id="sugestoesCliente"></ul>
+                
+                <!-- [CORREÇÃO] Campos para Novo Cliente (Aparecem apenas se o nome não existir) -->
+                <div id="novos_campos_cliente" class="row g-2 mt-2" style="display:none;">
+                    <div class="col-12"><small class="text-primary fw-bold"><i class="bi bi-person-plus"></i> Cliente novo detectado. Preencha para cadastrar:</small></div>
+                    <div class="col-md-6"><input type="text" name="cliente_telefone" id="inputTelefone" class="form-control form-control-sm" placeholder="Telefone / WhatsApp"></div>
+                    <div class="col-md-6"><input type="text" name="cliente_endereco" id="inputEndereco" class="form-control form-control-sm" placeholder="Endereço Completo"></div>
+                </div>
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-bold">Data do Serviço</label>
@@ -190,8 +214,13 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
             </div>
 
             <div class="col-12">
-                <label class="form-label fw-bold">Observações Internas</label>
-                <textarea name="obs" class="form-control bg-light border-0" rows="3" placeholder="Detalhes técnicos, endereço específico, etc..."><?php echo $is_edit ? htmlspecialchars($servico['obs']) : ''; ?></textarea>
+                <label class="form-label fw-bold">Laudo Técnico (Visível para o cliente)</label>
+                <textarea name="laudo_tecnico" class="form-control" rows="3" placeholder="Descreva o defeito constatado e a solução aplicada. Isso aparecerá na OS."><?php echo $is_edit ? htmlspecialchars($servico['laudo_tecnico'] ?? '') : ''; ?></textarea>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label fw-bold">Observações Internas (Não aparece na OS)</label>
+                <textarea name="obs" class="form-control bg-light border-0" rows="2" placeholder="Detalhes técnicos, endereço específico, etc..."><?php echo $is_edit ? htmlspecialchars($servico['obs']) : ''; ?></textarea>
             </div>
 
             <div class="col-12 text-end mt-4">
@@ -286,32 +315,31 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
      * em um Float válido para cálculos.
      */
     function parseCurrency(value) {
-        if (!value) return 0;
-        if (typeof value === 'number') return value;
-
-        // Limpa tudo que não é número, ponto ou vírgula
-        let cleanValue = value.toString().replace(/[^\d.,]/g, '');
-
-        // Caso: "1.500,50" -> Remove o ponto do milhar e troca a vírgula por ponto
-        if (cleanValue.includes('.') && cleanValue.includes(',')) {
-            cleanValue = cleanValue.replace(/\./g, '').replace(',', '.');
-        } 
-        // Caso: "1500,50" (apenas vírgula)
-        else if (cleanValue.includes(',')) {
-            cleanValue = cleanValue.replace(',', '.');
-        }
-        // Caso: "1.500" (usuário usou ponto como milhar mas sem centavos)
-        // Se houver apenas um ponto e ele estiver na posição de milhar (3 casas antes do fim ou mais)
-        else if (cleanValue.includes('.')) {
-            const parts = cleanValue.split('.');
-            if (parts[parts.length - 1].length !== 2) {
-                // Provavelmente é ponto de milhar, não decimal (ex: 1.500)
-                cleanValue = cleanValue.replace(/\./g, '');
-            }
-        }
-
-        const result = parseFloat(cleanValue);
-        return isNaN(result) ? 0 : result;
+         if (!value) return 0;
+         if (typeof value === 'number') return value;
+ 
+         let cleanValue = String(value).replace(/[^\d,.-]/g, '');
+ 
+         const lastComma = cleanValue.lastIndexOf(',');
+         const lastDot = cleanValue.lastIndexOf('.');
+ 
+         // Formato brasileiro (1.234,56)
+         if (lastComma > lastDot) {
+             // Remove todos os pontos (milhar) e troca a última vírgula por ponto (decimal)
+             cleanValue = cleanValue.replace(/\./g, '').replace(',', '.');
+         }
+         // Formato americano (1,234.56) ou com apenas pontos
+         else if (lastDot > lastComma) {
+             // Remove todas as vírgulas (milhar)
+             cleanValue = cleanValue.replace(/,/g, '');
+         }
+         // Apenas vírgula como decimal (1234,56)
+         else if (lastComma !== -1) {
+             cleanValue = cleanValue.replace(',', '.');
+         }
+ 
+         const result = parseFloat(cleanValue);
+         return isNaN(result) ? 0 : result;
     }
 
     /**
@@ -400,6 +428,20 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
 
     // --- Lógica de Autocomplete Customizado ---
 
+    // [CORREÇÃO] Verifica se o cliente digitado existe para mostrar/ocultar campos extras
+    function verificarClienteNovo(nome) {
+        const container = document.getElementById('novos_campos_cliente');
+        const clienteExistente = todosClientes.find(c => c.nome.toLowerCase() === nome.toLowerCase());
+        
+        if (clienteExistente) {
+            // Se o cliente já existe, esconde os campos extras
+            container.style.display = 'none';
+        } else {
+            // Se não existe (e tem mais de 2 letras), mostra para cadastrar telefone/endereço
+            if(nome.length > 2) container.style.display = 'flex';
+        }
+    }
+
     function mostrarSugestoesCliente(input) {
         const termo = input.value.toLowerCase();
         const lista = document.getElementById('sugestoesCliente');
@@ -407,6 +449,8 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
         lista.style.display = 'none';
 
         if (termo.length < 1) return;
+        
+        verificarClienteNovo(termo);
 
         const sugestoes = todosClientes.filter(cliente => cliente.nome.toLowerCase().includes(termo));
 
@@ -462,6 +506,8 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
         input.value = cliente.nome;
         // Esconde a lista
         document.getElementById('sugestoesCliente').style.display = 'none';
+        // Esconde campos de novo cliente pois selecionou um existente
+        document.getElementById('novos_campos_cliente').style.display = 'none';
     }
 
     function selecionarSugestao(input, item) {

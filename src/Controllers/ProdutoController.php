@@ -42,5 +42,21 @@ class ProdutoController
         }
     }
 
-    public function delete($id) { global $pdo; $pdo->prepare("DELETE FROM produtos WHERE id = ?")->execute([$id]); header('Location: ' . BASE_URL . '/produtos'); exit; }
+    public function delete($id)
+    {
+        global $pdo;
+        try {
+            $pdo->prepare("DELETE FROM produtos WHERE id = ?")->execute([$id]);
+            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Produto excluído com sucesso!'];
+        } catch (PDOException $e) {
+            // Verifica se é erro de constraint (chave estrangeira)
+            if (strpos($e->getMessage(), 'CONSTRAINT') !== false) {
+                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Não é possível excluir: Este produto está vinculado a uma ou mais Ordens de Serviço.'];
+            } else {
+                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Erro ao excluir produto: ' . $e->getMessage()];
+            }
+        }
+        header('Location: ' . BASE_URL . '/produtos');
+        exit;
+    }
 }

@@ -13,10 +13,12 @@ $router->get('clientes', 'ClienteController@index');
 $router->get('admin/dashboard', 'DashboardController@index');
 $router->get('servicos/novo', 'HomeController@create'); // Nova página de cadastro
 $router->get('servicos/editar/{id}', 'HomeController@edit'); // Rota para carregar o formulário de edição
+$router->get('servicos/visualizar/{id}', 'HomeController@show'); // [NOVO] Visualizar OS Pronta
 $router->get('catalogo', 'CatalogoController@index'); // Nova área de serviços
 $router->get('produtos', 'ProdutoController@index'); // Gestão de Produtos
 $router->get('fornecedores', 'FornecedorController@index'); // Gestão de Fornecedores
 $router->get('usuarios', 'UsuarioController@index'); // Gestão de Usuários
+$router->get('clientes/historico/{id}', 'ClienteController@historico'); // API para histórico do cliente
 $router->get('empresa', 'EmpresaController@index'); // Gestão de Dados da Empresa
 
 // Define as rotas POST (para formulários)

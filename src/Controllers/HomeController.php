@@ -81,9 +81,12 @@ class HomeController
             try {
                 // 1. Recebe os dados básicos
                 $cliente_nome = trim($_POST['cliente_nome'] ?? '');
+                $cliente_telefone = $_POST['cliente_telefone'] ?? '';
+                $cliente_endereco = $_POST['cliente_endereco'] ?? '';
                 $data_servico = $_POST['data_servico'] ?? date('Y-m-d');
                 $status = $_POST['status'] ?? 'Agendado';
                 $obs = $_POST['obs'] ?? '';
+                $laudo_tecnico = $_POST['laudo_tecnico'] ?? '';
                 $garantia = $_POST['garantia'] ?? 90;
                 // Converte o valor de moeda BRL para um float válido
                 $desconto = floatval(str_replace(',', '.', str_replace('.', '', $_POST['desconto'] ?? '0')));
@@ -97,6 +100,9 @@ class HomeController
                 $prods_id = $_POST['produto_id'] ?? [];
                 $prods_qtd = $_POST['produto_qtd'] ?? [];
 
+                // 2. Inicia Transação
+                $pdo->beginTransaction();
+
                 // Lógica de Cliente: Busca por nome ou cria novo
                 if (empty($cliente_nome)) {
                     throw new Exception("O nome do cliente é obrigatório.");
@@ -107,16 +113,13 @@ class HomeController
                 $cliente_id = $stmtCheck->fetchColumn();
 
                 if (!$cliente_id) {
-                    $stmtIns = $pdo->prepare("INSERT INTO clientes (nome) VALUES (?)");
-                    $stmtIns->execute([$cliente_nome]);
+                    $stmtIns = $pdo->prepare("INSERT INTO clientes (nome, telefone, endereco) VALUES (?, ?, ?)");
+                    $stmtIns->execute([$cliente_nome, $cliente_telefone, $cliente_endereco]);
                     $cliente_id = $pdo->lastInsertId();
                 }
 
-                // 2. Inicia Transação
-                $pdo->beginTransaction();
-
                 // 3. Insere o Serviço
-                $stmt = $pdo->prepare("INSERT INTO servicos (cliente, cliente_id, data_servico, status, valor_total, desconto, valor_pago, garantia, obs) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO servicos (cliente, cliente_id, data_servico, status, valor_total, desconto, valor_pago, garantia, obs, laudo_tecnico) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([
                     $cliente_nome,
                     $cliente_id,
@@ -126,7 +129,8 @@ class HomeController
                     $desconto,
                     0, // Valor pago (pode ser implementado depois)
                     $garantia,
-                    $obs
+                    $obs,
+                    $laudo_tecnico
                 ]);
                 
                 $servico_id = $pdo->lastInsertId();
@@ -165,9 +169,11 @@ class HomeController
                 // 6. Atualiza o valor total do serviço
                 // O valor total final é a soma dos itens MENOS o desconto
                 $valor_final = $valor_total_servico - $desconto; // Agora ambos são floats
-                $pdo->exec("UPDATE servicos SET valor_total = $valor_final WHERE id = $servico_id");
+                $stmtUpdateTotal = $pdo->prepare("UPDATE servicos SET valor_total = ? WHERE id = ?");
+                $stmtUpdateTotal->execute([$valor_final, $servico_id]);
 
                 $pdo->commit();
+                $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Ordem de Serviço criada com sucesso!'];
                 header('Location: ' . BASE_URL . '/'); // Redireciona para a home
                 exit;
 
@@ -228,6 +234,41 @@ class HomeController
         ]);
     }
 
+    public function show($id)
+    {
+        global $pdo;
+
+        // 1. Busca o serviço principal
+        $stmt = $pdo->prepare("SELECT s.*, c.telefone as cliente_telefone, c.endereco as cliente_endereco, c.email as cliente_email FROM servicos s LEFT JOIN clientes c ON s.cliente_id = c.id WHERE s.id = ?");
+        $stmt->execute([$id]);
+        $servico = $stmt->fetch();
+
+        if (!$servico) {
+            return view('404');
+        }
+
+        // 2. Busca os itens do serviço
+        $stmtItens = $pdo->prepare("SELECT * FROM servicos_itens WHERE servico_id = ?");
+        $stmtItens->execute([$id]);
+        $servico['itens'] = $stmtItens->fetchAll();
+
+        // 3. Busca os produtos vinculados
+        $stmtProds = $pdo->prepare("
+            SELECT sp.*, p.nome 
+            FROM servicos_produtos sp 
+            JOIN produtos p ON sp.produto_id = p.id 
+            WHERE sp.servico_id = ?");
+        $stmtProds->execute([$id]);
+        $servico['produtos'] = $stmtProds->fetchAll();
+
+        // 4. Busca dados da empresa para o cabeçalho
+        $empresa = [];
+        $conf = $pdo->query("SELECT * FROM configuracoes")->fetchAll();
+        foreach($conf as $c) $empresa[$c['chave']] = $c['valor'];
+
+        return view('ver_servico', ['servico' => $servico, 'empresa' => $empresa]);
+    }
+
     public function update($id)
     {
         global $pdo;
@@ -236,9 +277,12 @@ class HomeController
             try {
                 // 1. Recebe os dados básicos
                 $cliente_nome = trim($_POST['cliente_nome'] ?? '');
+                $cliente_telefone = $_POST['cliente_telefone'] ?? '';
+                $cliente_endereco = $_POST['cliente_endereco'] ?? '';
                 $data_servico = $_POST['data_servico'] ?? date('Y-m-d');
                 $status = $_POST['status'] ?? 'Agendado';
                 $obs = $_POST['obs'] ?? '';
+                $laudo_tecnico = $_POST['laudo_tecnico'] ?? '';
                 $garantia = $_POST['garantia'] ?? 90;
                 $desconto = floatval(str_replace(',', '.', str_replace('.', '', $_POST['desconto'] ?? '0')));
                 
@@ -251,22 +295,42 @@ class HomeController
                 $prods_id = $_POST['produto_id'] ?? [];
                 $prods_qtd = $_POST['produto_qtd'] ?? [];
 
-                // Lógica de Cliente: Busca por nome ou cria novo
+                $pdo->beginTransaction();
+
+                // Lógica de Cliente: Atualiza o nome ou reassocia o cliente.
                 if (empty($cliente_nome)) {
                     throw new Exception("O nome do cliente é obrigatório.");
                 }
 
+                // Busca o cliente original da OS para saber quem estamos editando
+                $stmtOrig = $pdo->prepare("SELECT cliente_id FROM servicos WHERE id = ?");
+                $stmtOrig->execute([$id]);
+                $original_cliente_id = $stmtOrig->fetchColumn();
+
+                // Verifica se o novo nome já pertence a outro cliente
                 $stmtCheck = $pdo->prepare("SELECT id FROM clientes WHERE nome = ?");
                 $stmtCheck->execute([$cliente_nome]);
-                $cliente_id = $stmtCheck->fetchColumn();
+                $target_cliente_id = $stmtCheck->fetchColumn();
 
-                if (!$cliente_id) {
-                    $stmtIns = $pdo->prepare("INSERT INTO clientes (nome) VALUES (?)");
-                    $stmtIns->execute([$cliente_nome]);
+                if ($target_cliente_id) {
+                    // Um cliente com o nome digitado já existe. Vamos usar o ID dele.
+                    $cliente_id = $target_cliente_id;
+                } else if ($original_cliente_id) {
+                    // Nenhum cliente com o nome digitado existe, e a OS tinha um cliente vinculado.
+                    // Isso significa que o usuário quer RENOMEAR o cliente original.
+                    // ATUALIZAÇÃO: Também atualiza telefone e endereço para corrigir o cadastro completo.
+                    $stmtUpdateCliente = $pdo->prepare("UPDATE clientes SET nome = ?, telefone = ?, endereco = ? WHERE id = ?");
+                    $stmtUpdateCliente->execute([$cliente_nome, $cliente_telefone, $cliente_endereco, $original_cliente_id]);
+                    $cliente_id = $original_cliente_id;
+                } else {
+                    // Nenhum cliente com o nome digitado existe, e a OS não tinha cliente vinculado (dado antigo).
+                    // Nesse caso, criamos um novo cliente.
+                    // SEGURANÇA: Se o nome digitado não existe, CRIAMOS um novo cliente.
+                    // Não renomeamos o antigo para evitar que a edição de uma OS altere o cadastro do cliente para todo o sistema.
+                    $stmtIns = $pdo->prepare("INSERT INTO clientes (nome, telefone, endereco) VALUES (?, ?, ?)");
+                    $stmtIns->execute([$cliente_nome, $cliente_telefone, $cliente_endereco]);
                     $cliente_id = $pdo->lastInsertId();
                 }
-
-                $pdo->beginTransaction();
 
                 // 2. Calcula o valor total dos itens
                 $valor_total_itens = 0;
@@ -291,8 +355,8 @@ class HomeController
                 $valor_final = $valor_total_itens - $desconto;
 
                 // 3. Atualiza o serviço principal
-                $stmt = $pdo->prepare("UPDATE servicos SET cliente = ?, cliente_id = ?, data_servico = ?, status = ?, valor_total = ?, desconto = ?, garantia = ?, obs = ? WHERE id = ?");
-                $stmt->execute([$cliente_nome, $cliente_id, $data_servico, $status, $valor_final, $desconto, $garantia, $obs, $id]);
+                $stmt = $pdo->prepare("UPDATE servicos SET cliente = ?, cliente_id = ?, data_servico = ?, status = ?, valor_total = ?, desconto = ?, garantia = ?, obs = ?, laudo_tecnico = ? WHERE id = ?");
+                $stmt->execute([$cliente_nome, $cliente_id, $data_servico, $status, $valor_final, $desconto, $garantia, $obs, $laudo_tecnico, $id]);
 
                 // 4. Deleta os itens antigos para reinserir os novos
                 $pdo->prepare("DELETE FROM servicos_itens WHERE servico_id = ?")->execute([$id]);
@@ -336,6 +400,7 @@ class HomeController
                 }
 
                 $pdo->commit();
+                $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Ordem de Serviço atualizada com sucesso!'];
                 header('Location: ' . BASE_URL . '/');
                 exit;
 
@@ -372,6 +437,7 @@ class HomeController
             $pdo->prepare("DELETE FROM servicos WHERE id = ?")->execute([$id]);
 
             $pdo->commit();
+            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Ordem de Serviço excluída com sucesso!'];
         } catch (Exception $e) {
             $pdo->rollBack();
             die("Erro ao excluir serviço: " . $e->getMessage());

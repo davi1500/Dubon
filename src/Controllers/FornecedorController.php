@@ -32,7 +32,20 @@ class FornecedorController
         }
     }
 
-    public function delete($id) {
-        global $pdo; $pdo->prepare("DELETE FROM fornecedores WHERE id = ?")->execute([$id]); header('Location: ' . BASE_URL . '/fornecedores'); exit;
+    public function delete($id)
+    {
+        global $pdo;
+        try {
+            $pdo->prepare("DELETE FROM fornecedores WHERE id = ?")->execute([$id]);
+            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Fornecedor excluído com sucesso!'];
+        } catch (PDOException $e) {
+            if (strpos($e->getMessage(), 'CONSTRAINT') !== false) {
+                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Não é possível excluir: Este fornecedor possui produtos cadastrados.'];
+            } else {
+                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Erro ao excluir fornecedor: ' . $e->getMessage()];
+            }
+        }
+        header('Location: ' . BASE_URL . '/fornecedores');
+        exit;
     }
 }

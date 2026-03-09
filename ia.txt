@@ -1,6 +1,6 @@
 
 PROJETO: Sistema de Gestão - Dubom Refrigeração
-DATA DA ÚLTIMA ATUALIZAÇÃO: Março 2026
+DATA DA ÚLTIMA ATUALIZAÇÃO: Junho 2026
 
 --- TECNOLOGIAS ---
 - Backend: PHP Puro (Arquitetura Híbrida: MVC Básico + Arquivos Legados em migração).
@@ -22,7 +22,6 @@ DATA DA ÚLTIMA ATUALIZAÇÃO: Março 2026
 1. public/index.php: Front Controller.
 2. src/Router.php: Roteador simples (Regex).
 3. conexao.php: Configuração do Banco de Dados e Migrations Automáticas.
-4. gerar_os.php (Legado): Gerador de PDF/Impressão.
 
 --- REGRAS DE NEGÓCIO IMPLEMENTADAS ---
 
@@ -37,8 +36,9 @@ DATA DA ÚLTIMA ATUALIZAÇÃO: Março 2026
 
 3. UX/UI (AGILIDADE):
    - Autocomplete Inteligente: Sugere clientes e serviços ao digitar.
-   - Cadastro Rápido: Se o cliente não existe na criação da OS, ele é criado automaticamente pelo nome.
+   - Cadastro Rápido Inteligente: Se o cliente não existe na criação da OS, o sistema avisa e exibe campos opcionais (telefone, endereço) para um cadastro mais completo na mesma tela.
    - Kanban: Visualização de status por colunas (Agendado -> Em Andamento -> Concluído -> Pago).
+   - Visualização Moderna de OS: Nova tela de visualização/impressão com link direto para WhatsApp e PDF.
 
 --- CONTEXTO DA EMPRESA (PERSONA) ---
 - Equipe: Cresceu para 4 pessoas. O dono (Pai) não trabalha mais sozinho.
@@ -57,7 +57,35 @@ Principais Tabelas:
 - catalogo (Preços padrão de serviços)
 
 --- PRÓXIMOS PASSOS (TODO LIST) ---
-1. Controle de Despesas Operacionais: Lançar gastos avulsos (combustível, alimentação) para DRE completa.
-2. Botão WhatsApp: Link direto nos cards para enviar mensagem/OS pré-formatada.
+1. Segurança: Implementar criptografia de senhas (hash) para usuários.
+2. Controle de Despesas Operacionais: Lançar gastos avulsos (combustível, alimentação) para DRE completa.
 3. Relatórios Avançados: Gráficos de desempenho por técnico e por período.
-4. Personalização Visual: Inserir logotipo real na impressão da OS.
+4. Limpeza de Código: Remover arquivos legados não utilizados (clientes.legacy.php, catalogo.php, migrar_dados.php).
+
+--- COMO ENVIAR PARA O GITHUB (PRIMEIRA VEZ) ---
+--- COMO ENVIAR ATUALIZAÇÕES PARA O GITHUB ---
+1. Abra o terminal na pasta do projeto.
+2. Inicialize o Git:
+   git init
+3. Adicione os arquivos:
+2. Verifique o status (opcional):
+   git status
+3. Adicione todas as mudanças:
+   git add .
+4. Faça o primeiro commit:
+   git commit -m "Primeiro commit: Sistema Dubom"
+5. Crie o repositório no site do GitHub (sem README/gitignore).
+6. Conecte o repositório remoto (substitua a URL):
+   git remote add origin https://github.com/SEU_USUARIO/NOME_DO_REPO.git
+7. Envie os arquivos:
+   git push -u origin main
+
+--- COMO ATUALIZAR (DEPOIS DA PRIMEIRA VEZ) ---
+1. git status (opcional)
+2. git add .
+3. git commit -m "Descrição das mudanças"
+4. git push
+4. Salve o commit com uma mensagem:
+   git commit -m "Descrição das atualizações"
+5. Envie para o repositório remoto:
+   git push
