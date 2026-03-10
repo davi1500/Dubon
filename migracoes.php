@@ -37,6 +37,17 @@ try {
         laudo_tecnico TEXT
     )");
 
+    // Atualização de Schema para Serviços (Novos Campos)
+    // Garante que as colunas existam mesmo se a tabela já foi criada anteriormente
+    $cols_servicos = ['cliente_id' => 'INTEGER', 'laudo_tecnico' => 'TEXT'];
+    foreach ($cols_servicos as $col => $type) {
+        try {
+            $pdo->exec("ALTER TABLE servicos ADD COLUMN $col $type");
+        } catch (Exception $e) {
+            // Coluna já existe, ignora o erro
+        }
+    }
+
     // 3. Tabela de Itens do Serviço
     $pdo->exec("CREATE TABLE IF NOT EXISTS servicos_itens (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
