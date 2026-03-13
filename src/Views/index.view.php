@@ -4,7 +4,7 @@ $grupos = [
     'Agendado'     => ['titulo' => 'Agendados', 'cor' => 'info', 'icone' => 'bi-calendar-event', 'lista' => []],
     'Em Andamento' => ['titulo' => 'Em Andamento', 'cor' => 'primary', 'icone' => 'bi-tools', 'lista' => []],
     'Concluido'    => ['titulo' => 'Concluídos (A Receber)', 'cor' => 'warning', 'icone' => 'bi-check-circle', 'lista' => []],
-    'Pago'         => ['titulo' => 'Pagos', 'cor' => 'success', 'icone' => 'bi-cash-coin', 'lista' => []],
+    'Pago'         => ['titulo' => 'Pagos (Total)', 'cor' => 'success', 'icone' => 'bi-cash-coin', 'lista' => []],
 ];
 
 // Distribui os serviços nos grupos
@@ -147,7 +147,7 @@ $dias_semana_map = [
         <div class="col-md-4">
             <div class="card card-dashboard bg-success text-white shadow-sm h-100">
                 <div class="card-body">
-                    <h6 class="card-title opacity-75"><i class="bi bi-cash-coin"></i> Faturamento (Recebido)</h6>
+                    <h6 class="card-title opacity-75"><i class="bi bi-calendar-check"></i> Faturamento (Este Mês)</h6>
                     <h3 class="fw-bold mb-0">R$ <?php echo number_format($dashboard['faturamento'], 2, ',', '.'); ?></h3>
                 </div>
             </div>
@@ -202,16 +202,48 @@ $dias_semana_map = [
                                             $dia_semana_pt = $dias_semana_map[$dia_semana_en] ?? '';
                                         ?>
                                         <small class="text-muted">
+                                            <?php if(!empty($s['servico_pai_id'])): ?>
+                                                <span class="badge bg-warning text-dark me-1" title="Retorno de Garantia da OS #<?php echo $s['servico_pai_id']; ?>">
+                                                    <i class="bi bi-arrow-repeat"></i> R
+                                                </span>
+                                            <?php endif; ?>
                                             <span style="font-size: 0.7em; opacity: 0.6;">#<?php echo $s['id']; ?></span>
                                             <span class="fw-bold ms-1"><?php echo $dia_semana_pt; ?>, <?php echo date('d/m', strtotime($s['data_servico'])); ?></span>
                                         </small>
                                         <?php if (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin'): ?>
-                                            <small class="fw-bold text-success">R$ <?php echo number_format($s['valor_total'], 2, ',', '.'); ?></small>
+                                            <div class="text-end">
+                                                <small class="fw-bold text-success">R$ <?php echo number_format($s['valor_total'], 2, ',', '.'); ?></small>
+                                                <?php if($s['valor_pago'] > 0 && $s['valor_pago'] < $s['valor_total'] && $s['status'] !== 'Pago'): ?>
+                                                    <br><span class="badge bg-success-subtle text-success-emphasis border border-success-subtle" style="font-size: 0.65rem;" title="Valor já adiantado">
+                                                        Pago: R$ <?php echo number_format($s['valor_pago'], 2, ',', '.'); ?>
+                                                    </span>
+                                                <?php endif; ?>
+                                            </div>
                                         <?php endif; ?>
                                     </div>
                                     <p class="fw-bold mb-1 text-truncate" title="<?php echo htmlspecialchars($s['nome_cliente'] ?? $s['cliente']); ?>">
                                         <?php echo htmlspecialchars($s['nome_cliente'] ?? $s['cliente']); ?>
                                     </p>
+                                    
+                                    <!-- [NOVO] Resumo dos Itens (Pequeno) -->
+                                    <?php if (!empty($s['resumo_itens'])): ?>
+                                        <div class="mb-2" style="font-size: 0.75rem; line-height: 1.3;">
+                                            <?php 
+                                                $itens_preview = explode('|||', $s['resumo_itens']);
+                                                $qtd_preview = count($itens_preview);
+                                                $mostrar = array_slice($itens_preview, 0, 2); // Mostra apenas os 2 primeiros
+                                            ?>
+                                            <?php foreach($mostrar as $item_desc): ?>
+                                                <div class="text-truncate text-secondary">
+                                                    <i class="bi bi-check2-circle me-1 text-primary" style="opacity: 0.7;"></i><?php echo htmlspecialchars($item_desc); ?>
+                                                </div>
+                                            <?php endforeach; ?>
+                                            <?php if($qtd_preview > 2): ?>
+                                                <div class="text-muted fst-italic ps-3">+<?php echo $qtd_preview - 2; ?> item(s)...</div>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endif; ?>
+
                                     <p class="card-text small text-muted text-truncate mb-2">
                                         <?php echo htmlspecialchars($s['obs'] ?: 'Sem observações'); ?>
                                     </p>

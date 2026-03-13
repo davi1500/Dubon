@@ -34,12 +34,13 @@ try {
         obs TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         cliente_id INTEGER,
-        laudo_tecnico TEXT
+        laudo_tecnico TEXT,
+        servico_pai_id INTEGER -- ID da OS original (caso seja garantia)
     )");
 
     // Atualização de Schema para Serviços (Novos Campos)
     // Garante que as colunas existam mesmo se a tabela já foi criada anteriormente
-    $cols_servicos = ['cliente_id' => 'INTEGER', 'laudo_tecnico' => 'TEXT'];
+    $cols_servicos = ['cliente_id' => 'INTEGER', 'laudo_tecnico' => 'TEXT', 'servico_pai_id' => 'INTEGER'];
     foreach ($cols_servicos as $col => $type) {
         try {
             $pdo->exec("ALTER TABLE servicos ADD COLUMN $col $type");
@@ -139,6 +140,35 @@ try {
         preco_venda DECIMAL(10,2),
         FOREIGN KEY (servico_id) REFERENCES servicos(id) ON DELETE CASCADE,
         FOREIGN KEY (produto_id) REFERENCES produtos(id)
+    )");
+
+    // 11. Tabela de Materiais (Lista de Compras)
+    $pdo->exec("CREATE TABLE IF NOT EXISTS materiais (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nome TEXT NOT NULL,
+        status TEXT DEFAULT 'ok', -- 'ok' ou 'comprar'
+        obs TEXT
+    )");
+
+    // 12. Tabela de Despesas (Caixa / Saídas)
+    $pdo->exec("CREATE TABLE IF NOT EXISTS despesas (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        descricao TEXT NOT NULL,
+        valor DECIMAL(10,2) NOT NULL,
+        data_despesa DATE NOT NULL,
+        categoria TEXT, -- 'Transporte', 'Alimentacao', 'Loja', 'Fixa', 'Pessoal'
+        obs TEXT
+    )");
+
+    // 13. Tabela de Despesas Recorrentes (Fixas)
+    $pdo->exec("CREATE TABLE IF NOT EXISTS despesas_recorrentes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        descricao TEXT NOT NULL,
+        valor DECIMAL(10,2) NOT NULL,
+        dia_vencimento INTEGER NOT NULL,
+        categoria TEXT,
+        ativa INTEGER DEFAULT 1, -- 1 para ativa, 0 para inativa
+        obs TEXT
     )");
 
     echo "<p class='log success'>✔ Tabelas criadas/verificadas com sucesso.</p>";

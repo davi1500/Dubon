@@ -110,6 +110,115 @@ $uri = $_SERVER['REQUEST_URI'];
         color: #dc3545;
         font-weight: bold;
     }
+
+    /* --- DARK MODE OVERRIDES --- */
+    [data-bs-theme="dark"] body {
+        background-color: #0d1117 !important; /* Fundo bem escuro (estilo GitHub Dark) */
+        color: #e6edf3;
+    }
+    
+    [data-bs-theme="dark"] .sidebar {
+        --sidebar-bg: #161b22; /* Sidebar um pouco mais clara que o fundo */
+        --sidebar-border: #30363d;
+    }
+
+    [data-bs-theme="dark"] .sidebar .nav-link {
+        color: #c9d1d9;
+    }
+
+    [data-bs-theme="dark"] .sidebar .nav-link:hover,
+    [data-bs-theme="dark"] .sidebar .nav-link.active {
+        background-color: #1f6feb;
+        color: #fff;
+    }
+
+    [data-bs-theme="dark"] .card {
+        background-color: #161b22; /* Cards escuros */
+        border-color: #30363d;
+        color: #e6edf3;
+    }
+
+    /* Corrige classes utilitárias do Bootstrap que forçam cor clara */
+    [data-bs-theme="dark"] .bg-white {
+        background-color: #161b22 !important;
+        color: #e6edf3;
+    }
+
+    [data-bs-theme="dark"] .bg-light {
+        background-color: #0d1117 !important;
+        color: #e6edf3;
+    }
+
+    [data-bs-theme="dark"] .text-dark {
+        color: #e6edf3 !important;
+    }
+
+    [data-bs-theme="dark"] .text-muted {
+        color: #8b949e !important;
+    }
+
+    [data-bs-theme="dark"] .table {
+        color: #e6edf3;
+        border-color: #30363d;
+    }
+    
+    [data-bs-theme="dark"] .table-light, 
+    [data-bs-theme="dark"] .table-light th,
+    [data-bs-theme="dark"] .table-light td {
+        background-color: #161b22;
+        color: #e6edf3;
+        border-color: #30363d;
+    }
+
+    [data-bs-theme="dark"] .form-control,
+    [data-bs-theme="dark"] .form-select {
+        background-color: #0d1117;
+        border-color: #30363d;
+        color: #e6edf3;
+    }
+
+    [data-bs-theme="dark"] .modal-content {
+        background-color: #161b22;
+        border-color: #30363d;
+    }
+
+    /* --- DARK MODE: Correções Específicas (Home/Kanban) --- */
+    
+    /* Kanban: Fundo das colunas deve ser escuro e translúcido, não branco */
+    [data-bs-theme="dark"] .kanban-col {
+        background-color: rgba(22, 27, 34, 0.6) !important;
+        border: 1px solid #30363d !important;
+    }
+
+    /* Cards de Ação (Resumo do topo) */
+    [data-bs-theme="dark"] .card-action {
+        background-color: #161b22 !important;
+        border-color: #30363d !important;
+    }
+    [data-bs-theme="dark"] .card-action:hover {
+        border-color: #1f6feb !important;
+    }
+
+    /* Botões 'Light' (Ex: Ver mais) devem ser escuros no dark mode */
+    [data-bs-theme="dark"] .btn-light {
+        background-color: #21262d;
+        border-color: #30363d;
+        color: #c9d1d9;
+    }
+    [data-bs-theme="dark"] .btn-light:hover {
+        background-color: #30363d;
+        color: #fff;
+    }
+
+    /* Input de Busca Transparente (para não ficar preto dentro do card cinza) */
+    [data-bs-theme="dark"] .form-control.border-0 {
+        background-color: transparent !important;
+        color: #e6edf3;
+    }
+    [data-bs-theme="dark"] .input-group-text.bg-white {
+        background-color: #161b22 !important; /* Mesma cor do card */
+        color: #8b949e;
+    }
 </style>
 
 <!-- Botão Mobile e Overlay -->
@@ -148,6 +257,11 @@ $uri = $_SERVER['REQUEST_URI'];
             </a>
         </li>
         <li class="nav-item">
+            <a class="nav-link <?php echo str_starts_with($uri, '/materiais') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/materiais">
+                <i class="bi bi-cart-check"></i> Materiais
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link <?php echo str_starts_with($uri, '/fornecedores') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/fornecedores">
                 <i class="bi bi-truck"></i> Fornecedores
             </a>
@@ -155,6 +269,11 @@ $uri = $_SERVER['REQUEST_URI'];
         <li class="nav-item">
             <a class="nav-link <?php echo str_starts_with($uri, '/usuarios') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/usuarios">
                 <i class="bi bi-person-badge-fill"></i> Equipe
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link <?php echo str_starts_with($uri, '/despesas') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/despesas">
+                <i class="bi bi-wallet2"></i> Financeiro / Despesas
             </a>
         </li>
         <li class="nav-item">
@@ -166,6 +285,10 @@ $uri = $_SERVER['REQUEST_URI'];
     </ul>
 
     <div class="sidebar-footer">
+        <button class="btn btn-outline-secondary btn-sm w-100 mb-3 border-0" id="btnThemeToggle" onclick="toggleTheme()">
+            <i class="bi bi-moon-stars-fill me-2"></i> <span>Modo Escuro</span>
+        </button>
+
         <div class="user-info">
             <i class="bi bi-person-circle"></i>
             <span><?php echo htmlspecialchars($nome_usuario); ?></span>
@@ -179,4 +302,34 @@ $uri = $_SERVER['REQUEST_URI'];
         document.getElementById('sidebar').classList.toggle('show');
         document.getElementById('menuOverlay').classList.toggle('show');
     }
+
+    // Lógica do Tema Dark
+    function toggleTheme() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute('data-bs-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        
+        html.setAttribute('data-bs-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeIcon(newTheme);
+    }
+
+    function updateThemeIcon(theme) {
+        const btn = document.getElementById('btnThemeToggle');
+        const icon = btn.querySelector('i');
+        const text = btn.querySelector('span');
+        
+        if (theme === 'dark') {
+            icon.className = 'bi bi-sun-fill me-2';
+            text.textContent = 'Modo Claro';
+        } else {
+            icon.className = 'bi bi-moon-stars-fill me-2';
+            text.textContent = 'Modo Escuro';
+        }
+    }
+
+    // Carregar tema salvo
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-bs-theme', savedTheme);
+    document.addEventListener('DOMContentLoaded', () => updateThemeIcon(savedTheme));
 </script>

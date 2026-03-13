@@ -32,9 +32,10 @@ class UsuarioController
             if ($id) {
                 // Atualizar
                 if (!empty($senha)) {
-                    // Se digitou senha nova, atualiza
+                    // Se digitou senha nova, criptografa antes de salvar
+                    $hash = password_hash($senha, PASSWORD_DEFAULT);
                     $stmt = $pdo->prepare("UPDATE usuarios SET nome=?, usuario=?, senha=?, nivel=? WHERE id=?");
-                    $stmt->execute([$nome, $usuario, $senha, $nivel, $id]);
+                    $stmt->execute([$nome, $usuario, $hash, $nivel, $id]);
                 } else {
                     // Mantém senha antiga
                     $stmt = $pdo->prepare("UPDATE usuarios SET nome=?, usuario=?, nivel=? WHERE id=?");
@@ -42,8 +43,9 @@ class UsuarioController
                 }
             } else {
                 // Criar Novo
+                $hash = password_hash($senha, PASSWORD_DEFAULT);
                 $stmt = $pdo->prepare("INSERT INTO usuarios (nome, usuario, senha, nivel) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$nome, $usuario, $senha, $nivel]);
+                $stmt->execute([$nome, $usuario, $hash, $nivel]);
             }
             header('Location: ' . BASE_URL . '/usuarios');
             exit;

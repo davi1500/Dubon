@@ -38,6 +38,9 @@ $page_title = "Ordem de Serviço #" . $servico['id'];
 <div class="container mt-3 mb-3 no-print d-flex justify-content-between align-items-center">
     <a href="<?php echo BASE_URL; ?>/" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Voltar</a>
     <div>
+        <?php if(empty($servico['servico_pai_id'])): // Só mostra opção de garantia se essa já não for uma garantia ?>
+            <button onclick="confirmarGarantia()" class="btn btn-warning me-2"><i class="bi bi-arrow-repeat"></i> Acionar Garantia</button>
+        <?php endif; ?>
         <a href="<?php echo BASE_URL; ?>/servicos/editar/<?php echo $servico['id']; ?>" class="btn btn-outline-primary me-2"><i class="bi bi-pencil"></i> Editar</a>
         <button onclick="window.print()" class="btn btn-secondary me-2"><i class="bi bi-printer"></i> Imprimir</button>
         <button onclick="enviarWhatsApp()" class="btn btn-success"><i class="bi bi-whatsapp"></i> Enviar no WhatsApp</button>
@@ -63,6 +66,12 @@ $page_title = "Ordem de Serviço #" . $servico['id'];
         <div class="col-4 text-end">
             <h4 class="text-secondary fw-bold">OS Nº <?php echo str_pad($servico['id'], 4, '0', STR_PAD_LEFT); ?></h4>
             <small class="text-muted">Data: <?php echo date('d/m/Y', strtotime($servico['data_servico'])); ?></small>
+            
+            <?php if(!empty($servico['servico_pai_id'])): ?>
+                <div class="mt-2">
+                    <span class="badge bg-warning text-dark"><i class="bi bi-arrow-return-right"></i> GARANTIA DA OS #<?php echo $servico['servico_pai_id']; ?></span>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -199,6 +208,17 @@ function enviarWhatsApp() {
     let url = telefone ? `https://wa.me/55${telefone}?text=${encodeURIComponent(texto)}` : `https://wa.me/?text=${encodeURIComponent(texto)}`;
     
     window.open(url, '_blank');
+}
+
+function confirmarGarantia() {
+    if(confirm('Deseja abrir um RETORNO DE GARANTIA para este serviço?\n\nIsso criará uma nova OS vinculada a esta, com valor R$ 0,00, para registrar o retrabalho.')) {
+        // Cria um form dinâmico para enviar o POST
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '<?php echo BASE_URL; ?>/servicos/garantia/<?php echo $servico['id']; ?>';
+        document.body.appendChild(form);
+        form.submit();
+    }
 }
 </script>
 

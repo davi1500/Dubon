@@ -11,7 +11,9 @@ DATA DA ÚLTIMA ATUALIZAÇÃO: Junho 2026
 
 --- ARQUIVOS PRINCIPAIS (MVC) ---
 1. src/Controllers/HomeController.php: Dashboard, Kanban de OS e Criação de Serviços.
+2. src/Controllers/MaterialController.php: Gestão de Lista de Compras (Insumos).
 2. src/Controllers/ClienteController.php: Gestão de Clientes (CRUD).
+3. src/Controllers/DespesaController.php: Gestão de Despesas e Caixa Pequeno.
 3. src/Controllers/ProdutoController.php: Gestão de Estoque e Peças.
 4. src/Controllers/FornecedorController.php: Gestão de Fornecedores.
 5. src/Controllers/UsuarioController.php: Gestão de Acesso e Equipe.
@@ -22,6 +24,8 @@ DATA DA ÚLTIMA ATUALIZAÇÃO: Junho 2026
 1. public/index.php: Front Controller.
 2. src/Router.php: Roteador simples (Regex).
 3. conexao.php: Configuração do Banco de Dados e Migrations Automáticas.
+4. setup_produtos.php: Script para popular estoque inicial com peças e preços médios.
+5. setup_materiais.php: Script para popular lista de insumos de consumo.
 
 --- REGRAS DE NEGÓCIO IMPLEMENTADAS ---
 
@@ -30,9 +34,16 @@ DATA DA ÚLTIMA ATUALIZAÇÃO: Junho 2026
    - Funcionário: Acesso operacional (Visualizar/Criar OS, Clientes).
 
 2. FLUXO DE CAIXA E ESTOQUE:
-   - Produtos: Controle de quantidade e preço de custo/venda.
+   - Produtos (Revenda): Controle rigoroso de qtd (Gás, Cobre, Peças). Baixa automática ao criar OS.
+   - Materiais (Consumo): Controle visual "Tem/Acabou" para lista de compras (Fitas, Parafusos).
+   - Kits Rápidos (Pacotes): Ao selecionar um serviço padrão (ex: Instalação 9000 BTUs), o sistema preenche automaticamente Mão de Obra + Peças necessárias.
    - Serviços: Composição de valor (Mão de Obra + Peças).
    - Financeiro: Status de pagamento (Pendente/Pago) e cálculo de lucro estimado.
+
+3. GESTÃO INTELIGENTE:
+   - Separação de Custo vs Venda: O sistema calcula o lucro real da OS subtraindo o custo das peças.
+   - Lista de Compras: Geração de PDF limpo apenas com itens marcados como "COMPRAR".
+   - Flexibilidade: Possibilidade de zerar o preço de uma peça na OS (item incluso no pacote) mantendo a baixa no estoque.
 
 3. UX/UI (AGILIDADE):
    - Autocomplete Inteligente: Sugere clientes e serviços ao digitar.
@@ -43,7 +54,9 @@ DATA DA ÚLTIMA ATUALIZAÇÃO: Junho 2026
 --- CONTEXTO DA EMPRESA (PERSONA) ---
 - Equipe: Cresceu para 4 pessoas. O dono (Pai) não trabalha mais sozinho.
 - Operação: O dono sabe endereços de cabeça, mas a equipe precisa dessa informação no sistema.
+- Ramo de Atividade: Refrigeração e Climatização (Instalação/Manutenção de Splits, Câmaras Frias, Linha Branca).
 - Comunicação Atual: O dono envia áudios no WhatsApp explicando o serviço e valor. Funciona pela confiança, mas o objetivo é profissionalizar com Recibos/OS formais.
+- Estratégia de Preço: O dono negocia "Pacotes Fechados" (ex: "R$ 600 tudo incluso") para facilitar a venda. O sistema deve permitir isso na frente (cliente), mas separar internamente (Mão de Obra vs Peças) para apurar o lucro real.
 - Futuro: Venda de peças e controle de estoque/despesas.
 
 --- ESTRUTURA DE DADOS (SQLite) ---
@@ -52,15 +65,16 @@ Principais Tabelas:
 - servicos_itens (Detalhes da OS)
 - clientes (Dados PF/PJ)
 - produtos (Estoque)
+- despesas (Caixa/Saídas: Combustível, Alimentação, Fixas)
+- materiais (Lista de Compras/Insumos)
 - fornecedores (Parceiros)
 - usuarios (Login)
 - catalogo (Preços padrão de serviços)
 
 --- PRÓXIMOS PASSOS (TODO LIST) ---
 1. Segurança: Implementar criptografia de senhas (hash) para usuários.
-2. Controle de Despesas Operacionais: Lançar gastos avulsos (combustível, alimentação) para DRE completa.
-3. Relatórios Avançados: Gráficos de desempenho por técnico e por período.
-4. Limpeza de Código: Remover arquivos legados não utilizados (clientes.legacy.php, catalogo.php, migrar_dados.php).
+2. Relatórios Avançados: Gráficos de desempenho por técnico e por período.
+3. Backup: Implementar botão para baixar cópia do banco de dados SQLite.
 
 --- COMO ENVIAR ATUALIZAÇÕES PARA O GITHUB ---
 1. Abra o terminal na pasta do projeto.

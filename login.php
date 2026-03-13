@@ -20,7 +20,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->execute([':usuario' => $usuario]);
     $u = $stmt->fetch();
 
-    if ($u && $u['senha'] === $senha) {
+    $login_ok = false;
+
+    if ($u) {
+        // 1. Tenta validar como Criptografia (Padrão novo)
+        if (password_verify($senha, $u['senha'])) {
+            $login_ok = true;
+        } 
+        // 2. Se falhar, tenta validar como Texto Puro (Padrão antigo) e atualiza
+        elseif ($u['senha'] === $senha) {
+            $login_ok = true;
+            // Auto-migração: Criptografa a senha antiga agora mesmo
+            $newHash = password_hash($senha, PASSWORD_DEFAULT);
+            $pdo->prepare("UPDATE usuarios SET senha = ? WHERE id = ?")->execute([$newHash, $u['id']]);
+        }
+    }
+
+    if ($login_ok) {
             $_SESSION['usuario_id'] = $u['id'];
             $_SESSION['usuario_nome'] = $u['nome'];
             $_SESSION['usuario_nivel'] = $u['nivel'];

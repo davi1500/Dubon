@@ -47,6 +47,16 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
         </div>
     </div>
 
+    <!-- [NOVO] Seletor de Pacotes Rápidos -->
+    <?php if(!$is_edit): ?>
+    <div class="alert alert-info border-0 shadow-sm mb-4">
+        <label class="fw-bold mb-2"><i class="bi bi-lightning-charge-fill text-warning"></i> Agilizar Preenchimento (Pacotes Prontos)</label>
+        <select id="selectPacote" class="form-select form-select-lg" onchange="aplicarPacote(this)">
+            <option value="">Selecione um pacote para preencher automaticamente...</option>
+        </select>
+    </div>
+    <?php endif; ?>
+
     <form action="<?php echo $form_action; ?>" method="POST" class="card border-0 shadow-sm p-4 rounded-4">
         <div class="row g-3">
             
@@ -157,7 +167,7 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
                                         <div class="col-6 col-md-3">
                                             <div class="input-group">
                                                 <span class="input-group-text">R$</span>
-                                                <input type="text" class="form-control prod-valor" value="<?php echo number_format($prod['preco_venda'], 2, ',', '.'); ?>" readonly>
+                                                <input type="text" name="produto_valor[]" class="form-control prod-valor" value="<?php echo number_format($prod['preco_venda'], 2, ',', '.'); ?>" oninput="recalculateAll()">
                                             </div>
                                         </div>
                                         <div class="col-2 col-md-1">
@@ -234,6 +244,98 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
     const catalogo = <?php echo json_encode($catalogo); ?>;
     const todosClientes = <?php echo json_encode($clientes); ?>;
     const listaProdutos = <?php echo json_encode($produtos); ?>;
+    
+    // --- DEFINIÇÃO DOS PACOTES (KIT INSTALAÇÃO) ---
+    // Ajuste aqui para bater com a realidade do seu pai
+    const pacotesDefinidos = {
+        'inst_9000': {
+            titulo: 'Instalação Split 9.000/12.000 BTUs (Padrão 3m)',
+            servico: { desc: 'Mão de Obra de Instalação (Split)', valor: 350.00 },
+            pecas: [
+                { keyword: 'Cobre 1/4', qtd: 3 }, // 3 metros
+                { keyword: 'Cobre 3/8', qtd: 3 }, // 3 metros
+                { keyword: 'Isolante Térmico 1/4', qtd: 3 },
+                { keyword: 'Isolante Térmico 3/8', qtd: 3 },
+                { keyword: 'Suporte 400mm', qtd: 1 }, // 1 par
+                { keyword: 'Cabo PP', qtd: 4 }, // 4 metros
+                { keyword: 'Fita PVC', qtd: 1 } // 1 rolo
+            ]
+        },
+        'inst_18000': {
+            titulo: 'Instalação Split 18.000 BTUs (Padrão 3m)',
+            servico: { desc: 'Mão de Obra de Instalação (18k)', valor: 450.00 },
+            pecas: [
+                { keyword: 'Cobre 1/4', qtd: 3 },
+                { keyword: 'Cobre 1/2', qtd: 3 },
+                { keyword: 'Isolante Térmico 1/4', qtd: 3 },
+                { keyword: 'Isolante Térmico 1/2', qtd: 3 },
+                { keyword: 'Suporte 500mm', qtd: 1 },
+                { keyword: 'Cabo PP', qtd: 4 },
+                { keyword: 'Fita PVC', qtd: 1 }
+            ]
+        },
+        'carga_gas': {
+            titulo: 'Carga de Gás Completa',
+            servico: { desc: 'Mão de Obra e Vácuo', valor: 200.00 },
+            pecas: [
+                { keyword: 'Gás', qtd: 1 } // Vai puxar o primeiro gás que achar, usuário ajusta qual é
+            ]
+        }
+    };
+
+    // Carrega os pacotes no select ao iniciar
+    document.addEventListener('DOMContentLoaded', () => {
+        const selectPac = document.getElementById('selectPacote');
+        if(selectPac) {
+            for (const [key, pacote] of Object.entries(pacotesDefinidos)) {
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.text = pacote.titulo;
+                selectPac.appendChild(opt);
+            }
+        }
+    });
+
+    function aplicarPacote(select) {
+        const key = select.value;
+        if (!key || !pacotesDefinidos[key]) return;
+
+        const pct = pacotesDefinidos[key];
+
+        // 1. Limpa as listas atuais (opcional, aqui vou limpar para facilitar)
+        document.getElementById('listaItens').innerHTML = '';
+        document.getElementById('listaProdutos').innerHTML = '';
+
+        // 2. Adiciona o Serviço (Mão de Obra)
+        adicionarLinha(); // Cria a linha vazia
+        const rowServ = document.querySelector('#listaItens .item-linha:last-child');
+        rowServ.querySelector('.item-desc').value = pct.servico.desc;
+        rowServ.querySelector('input[name="item_valor[]"]').value = formatCurrencyForInput(pct.servico.valor);
+
+        // 3. Adiciona as Peças Automaticamente
+        pct.pecas.forEach(pecaReq => {
+            // Tenta encontrar o produto no array 'listaProdutos' (vindo do PHP) usando a palavra-chave
+            const produtoEncontrado = listaProdutos.find(p => p.nome.toLowerCase().includes(pecaReq.keyword.toLowerCase()));
+            
+            if (produtoEncontrado) {
+                adicionarLinhaProduto(); // Cria linha vazia
+                const rowProd = document.querySelector('#listaProdutos .prod-linha:last-child');
+                
+                // Seleciona o produto no dropdown
+                const selectProd = rowProd.querySelector('.prod-select');
+                selectProd.value = produtoEncontrado.id;
+                
+                // Define quantidade e atualiza preço
+                rowProd.querySelector('input[name="produto_qtd[]"]').value = pecaReq.qtd;
+                atualizarPrecoProduto(selectProd);
+            }
+        });
+
+        recalculateAll();
+        
+        // Reseta o select para não ficar marcado
+        select.value = "";
+    }
 
     // Mapa de Ícones e Cores por Categoria
     const categoriasIcons = {
@@ -282,7 +384,7 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
             <div class="col-6 col-md-3">
                 <div class="input-group">
                     <span class="input-group-text">R$</span>
-                    <input type="text" class="form-control prod-valor" placeholder="0,00" readonly>
+                    <input type="text" name="produto_valor[]" class="form-control prod-valor" placeholder="0,00" oninput="recalculateAll()">
                 </div>
             </div>
             <div class="col-2 col-md-1"><button type="button" class="btn btn-outline-danger w-100" onclick="removerLinhaProd(this)"><i class="bi bi-trash"></i></button></div>
@@ -377,10 +479,11 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
 
         // Soma Produtos
         const qtdsProd = document.querySelectorAll('input[name="produto_qtd[]"]');
-        const selectsProd = document.querySelectorAll('select[name="produto_id[]"]');
-        selectsProd.forEach((select, index) => {
+        const valoresProd = document.querySelectorAll('input[name="produto_valor[]"]');
+        
+        qtdsProd.forEach((inputQtd, index) => {
             const qtd = parseFloat(qtdsProd[index].value) || 0;
-            const preco = parseFloat(select.options[select.selectedIndex]?.getAttribute('data-preco')) || 0;
+            const preco = parseCurrency(valoresProd[index].value);
             subtotal += (qtd * preco);
         });
 
@@ -408,10 +511,11 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
 
         // Soma Produtos
         const qtdsProd = document.querySelectorAll('input[name="produto_qtd[]"]');
-        const selectsProd = document.querySelectorAll('select[name="produto_id[]"]');
-        selectsProd.forEach((select, index) => {
+        const valoresProd = document.querySelectorAll('input[name="produto_valor[]"]');
+
+        qtdsProd.forEach((inputQtd, index) => {
             const qtd = parseFloat(qtdsProd[index].value) || 0;
-            const preco = parseFloat(select.options[select.selectedIndex]?.getAttribute('data-preco')) || 0;
+            const preco = parseCurrency(valoresProd[index].value);
             subtotal += (qtd * preco);
         });
 

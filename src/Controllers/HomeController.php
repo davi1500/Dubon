@@ -10,9 +10,11 @@ class HomeController
         // 1. Busca os serviços
         // Busca os serviços no banco (lógica que estava no index.php antigo)
         $stmt = $pdo->query("
-            SELECT s.*, c.nome as nome_cliente 
+            SELECT s.*, c.nome as nome_cliente, GROUP_CONCAT(i.descricao, '|||') as resumo_itens 
             FROM servicos s 
             LEFT JOIN clientes c ON s.cliente_id = c.id 
+            LEFT JOIN servicos_itens i ON s.id = i.servico_id
+            GROUP BY s.id
             ORDER BY s.data_servico DESC, s.id DESC
         ");
         $servicos = $stmt->fetchAll();
@@ -25,14 +27,55 @@ class HomeController
             'lucro' => 0 // Futuramente implementaremos o lucro real
         ];
 
+        // [NOVO] Busca despesas do MÊS ATUAL para o dashboard
+        $mesAtual = date('Y-m');
+        $stmtDespesas = $pdo->prepare("SELECT SUM(valor) FROM despesas WHERE strftime('%Y-%m', data_despesa) = ?");
+        $stmtDespesas->execute([$mesAtual]);
+        $total_despesas_variaveis = $stmtDespesas->fetchColumn() ?: 0;
+
+        $total_despesas_fixas = $pdo->query("SELECT SUM(valor) FROM despesas_recorrentes WHERE ativa = 1")->fetchColumn() ?: 0;
+
+        // Array auxiliar para custos de peças por serviço
+        $custos_servicos = [];
         if (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin') {
+            // Busca o custo total das peças utilizadas em cada serviço
+            $stmtCustos = $pdo->query("SELECT servico_id, SUM(sp.quantidade * p.preco_custo) as custo_total 
+                                       FROM servicos_produtos sp 
+                                       JOIN produtos p ON sp.produto_id = p.id 
+                                       GROUP BY servico_id");
+            $custos_servicos = $stmtCustos->fetchAll(PDO::FETCH_KEY_PAIR);
+        }
+
+        if (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin') {
+            // Filtra os serviços para pegar apenas os do MÊS ATUAL para os cálculos do dashboard
+            $servicos_mes_atual = array_filter($servicos, function($s) use ($mesAtual) {
+                return substr($s['data_servico'], 0, 7) === $mesAtual;
+            });
+
+            // 1. Faturamento e Lucro são calculados sobre o MÊS ATUAL (Regime de Competência)
+            foreach ($servicos_mes_atual as $s) {
+                // Calcula quanto já foi pago nessa OS (para Faturamento Mensal)
+                $val_pago = ($s['status'] === 'Pago') ? $s['valor_total'] : ($s['valor_pago'] ?? 0);
+                $dashboard['faturamento'] += $val_pago;
+
+                // Lucro Bruto do Mês = Faturamento do Mês - Custo das Peças do Mês
+                $custo_pecas = $custos_servicos[$s['id']] ?? 0;
+                $dashboard['lucro'] += ($s['valor_total'] - $custo_pecas);
+            }
+            // Subtrai despesas (que já são filtradas pelo mês atual no início do método)
+            $dashboard['lucro'] -= ($total_despesas_variaveis + $total_despesas_fixas);
+
+            // 2. 'A Receber' considera TODOS os serviços pendentes (Global / Acumulado)
             foreach ($servicos as $s) {
-                $dashboard['faturamento'] += $s['valor_pago'];
-                $dashboard['pendente'] += ($s['valor_total'] - $s['valor_pago']);
-                if ($s['status'] === 'Em Andamento') {
-                    $dashboard['em_andamento']++;
+                // Calcula quanto já foi pago nessa OS
+                $val_pago = ($s['status'] === 'Pago') ? $s['valor_total'] : ($s['valor_pago'] ?? 0);
+                if ($s['status'] !== 'Pago') {
+                    $dashboard['pendente'] += ($s['valor_total'] - $val_pago);
                 }
             }
+
+            // Contagem de "Em Andamento" vem de todos os serviços, não só do mês
+            $dashboard['em_andamento'] = count(array_filter($servicos, fn($s) => $s['status'] === 'Em Andamento'));
         }
 
         // 3. Busca lista de clientes para o formulário de "Novo Serviço"
@@ -99,6 +142,7 @@ class HomeController
                 // Arrays dos produtos (peças)
                 $prods_id = $_POST['produto_id'] ?? [];
                 $prods_qtd = $_POST['produto_qtd'] ?? [];
+                $prods_valor = $_POST['produto_valor'] ?? []; // Novo campo editável
 
                 // 2. Inicia Transação
                 $pdo->beginTransaction();
@@ -155,10 +199,16 @@ class HomeController
 
                 for ($i = 0; $i < count($prods_id); $i++) {
                     if (!empty($prods_id[$i])) {
+                        // Prioriza o valor enviado pelo formulário (editável), senão busca do banco
+                        if (isset($prods_valor[$i]) && $prods_valor[$i] !== '') {
+                            $preco = floatval(str_replace(',', '.', str_replace('.', '', $prods_valor[$i])));
+                        } else {
+                            $stmtGetPreco->execute([$prods_id[$i]]);
+                            $preco = $stmtGetPreco->fetchColumn();
+                        }
+
                         $qtd = $prods_qtd[$i] < 1 ? 1 : $prods_qtd[$i];
-                        $stmtGetPreco->execute([$prods_id[$i]]);
-                        $preco = $stmtGetPreco->fetchColumn();
-                        
+
                         $stmtProd->execute([$servico_id, $prods_id[$i], $qtd, $preco]);
                         $stmtBaixa->execute([$qtd, $prods_id[$i]]);
                         
@@ -166,11 +216,17 @@ class HomeController
                     }
                 }
 
-                // 6. Atualiza o valor total do serviço
-                // O valor total final é a soma dos itens MENOS o desconto
-                $valor_final = $valor_total_servico - $desconto; // Agora ambos são floats
-                $stmtUpdateTotal = $pdo->prepare("UPDATE servicos SET valor_total = ? WHERE id = ?");
-                $stmtUpdateTotal->execute([$valor_final, $servico_id]);
+                // 6. Atualiza o valor total e pago do serviço
+                $valor_final = $valor_total_servico - $desconto;
+                
+                $valor_pago_final = 0;
+                if ($status === 'Pago') {
+                    $valor_pago_final = $valor_final;
+                }
+
+                // Atualiza o valor total e o valor pago na OS recém-criada
+                $stmtUpdateTotal = $pdo->prepare("UPDATE servicos SET valor_total = ?, valor_pago = ? WHERE id = ?");
+                $stmtUpdateTotal->execute([$valor_final, $valor_pago_final, $servico_id]);
 
                 $pdo->commit();
                 $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Ordem de Serviço criada com sucesso!'];
@@ -269,6 +325,56 @@ class HomeController
         return view('ver_servico', ['servico' => $servico, 'empresa' => $empresa]);
     }
 
+    public function storeGarantia($id)
+    {
+        global $pdo;
+
+        // Busca a OS original (Pai)
+        $stmt = $pdo->prepare("SELECT * FROM servicos WHERE id = ?");
+        $stmt->execute([$id]);
+        $pai = $stmt->fetch();
+
+        if (!$pai) {
+            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Serviço original não encontrado.'];
+            header('Location: ' . BASE_URL . '/');
+            exit;
+        }
+
+        try {
+            $pdo->beginTransaction();
+
+            // Cria a nova OS de Garantia
+            // Status: Agendado, Valor: 0, Obs: Referência à OS original
+            $obsGarantia = "RETORNO DE GARANTIA referente à OS #{$pai['id']}.\nMotivo: ";
+            
+            $stmtIns = $pdo->prepare("INSERT INTO servicos (cliente, cliente_id, data_servico, status, valor_total, desconto, valor_pago, garantia, obs, servico_pai_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmtIns->execute([
+                $pai['cliente'],
+                $pai['cliente_id'],
+                date('Y-m-d'), // Data de hoje
+                'Agendado',
+                0, // Valor começa zerado (é garantia)
+                0,
+                0,
+                0, // Garantia da garantia? Geralmente é o restante da original, ou 0.
+                $obsGarantia,
+                $pai['id'] // VÍNCULO IMPORTANTE
+            ]);
+            
+            $novaId = $pdo->lastInsertId();
+            $pdo->commit();
+
+            $_SESSION['flash_message'] = ['type' => 'warning', 'message' => 'OS de Garantia aberta! Preencha os detalhes do retorno.'];
+            // Redireciona direto para a edição da nova OS
+            header('Location: ' . BASE_URL . "/servicos/editar/{$novaId}");
+            exit;
+
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            die("Erro ao gerar garantia: " . $e->getMessage());
+        }
+    }
+
     public function update($id)
     {
         global $pdo;
@@ -294,6 +400,7 @@ class HomeController
                 // Arrays dos produtos
                 $prods_id = $_POST['produto_id'] ?? [];
                 $prods_qtd = $_POST['produto_qtd'] ?? [];
+                $prods_valor = $_POST['produto_valor'] ?? [];
 
                 $pdo->beginTransaction();
 
@@ -346,17 +453,27 @@ class HomeController
                 $stmtGetPreco = $pdo->prepare("SELECT preco_venda FROM produtos WHERE id = ?");
                 for ($i = 0; $i < count($prods_id); $i++) {
                     if (!empty($prods_id[$i])) {
-                        $stmtGetPreco->execute([$prods_id[$i]]);
-                        $preco = $stmtGetPreco->fetchColumn();
+                        if (isset($prods_valor[$i]) && $prods_valor[$i] !== '') {
+                            $preco = floatval(str_replace(',', '.', str_replace('.', '', $prods_valor[$i])));
+                        } else {
+                            $stmtGetPreco->execute([$prods_id[$i]]);
+                            $preco = $stmtGetPreco->fetchColumn();
+                        }
                         $qtd = $prods_qtd[$i] < 1 ? 1 : $prods_qtd[$i];
                         $valor_total_itens += ($preco * $qtd);
                     }
                 }
                 $valor_final = $valor_total_itens - $desconto;
 
+                // [CORREÇÃO] Define o valor pago com base no status
+                $valor_pago_final = 0;
+                if ($status === 'Pago') {
+                    $valor_pago_final = $valor_final;
+                }
+
                 // 3. Atualiza o serviço principal
-                $stmt = $pdo->prepare("UPDATE servicos SET cliente = ?, cliente_id = ?, data_servico = ?, status = ?, valor_total = ?, desconto = ?, garantia = ?, obs = ?, laudo_tecnico = ? WHERE id = ?");
-                $stmt->execute([$cliente_nome, $cliente_id, $data_servico, $status, $valor_final, $desconto, $garantia, $obs, $laudo_tecnico, $id]);
+                $stmt = $pdo->prepare("UPDATE servicos SET cliente = ?, cliente_id = ?, data_servico = ?, status = ?, valor_total = ?, desconto = ?, valor_pago = ?, garantia = ?, obs = ?, laudo_tecnico = ? WHERE id = ?");
+                $stmt->execute([$cliente_nome, $cliente_id, $data_servico, $status, $valor_final, $desconto, $valor_pago_final, $garantia, $obs, $laudo_tecnico, $id]);
 
                 // 4. Deleta os itens antigos para reinserir os novos
                 $pdo->prepare("DELETE FROM servicos_itens WHERE servico_id = ?")->execute([$id]);
@@ -390,8 +507,12 @@ class HomeController
                 
                 for ($i = 0; $i < count($prods_id); $i++) {
                     if (!empty($prods_id[$i])) {
-                        $stmtGetPreco->execute([$prods_id[$i]]);
-                        $preco = $stmtGetPreco->fetchColumn();
+                        if (isset($prods_valor[$i]) && $prods_valor[$i] !== '') {
+                            $preco = floatval(str_replace(',', '.', str_replace('.', '', $prods_valor[$i])));
+                        } else {
+                            $stmtGetPreco->execute([$prods_id[$i]]);
+                            $preco = $stmtGetPreco->fetchColumn();
+                        }
                         $qtd = $prods_qtd[$i] < 1 ? 1 : $prods_qtd[$i];
                         
                         $stmtProd->execute([$id, $prods_id[$i], $qtd, $preco]);
