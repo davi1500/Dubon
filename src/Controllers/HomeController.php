@@ -83,11 +83,71 @@ class HomeController
         $stmtClientes = $pdo->query("SELECT id, nome FROM clientes ORDER BY nome ASC");
         $clientes = $stmtClientes->fetchAll();
 
+        $graficos = [];
+        $preventivas = [];
+
+        if (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin') {
+            // [NOVO] Gráficos de Faturamento e Despesas (Últimos 6 meses)
+            $graficos = [
+                'meses' => [],
+                'faturamento' => [],
+                'despesas' => [],
+                'despesas_categorias' => ['labels' => [], 'data' => []]
+            ];
+
+            for ($i = 5; $i >= 0; $i--) {
+                // 'first day of' evita bugs se estivermos no dia 31 e o mês passado não tiver 31
+                $mes = date('Y-m', strtotime("first day of -$i months")); 
+                $mesLabel = date('m/Y', strtotime("first day of -$i months"));
+                $graficos['meses'][] = $mesLabel;
+
+                // Faturamento (usando a tabela de pagamentos real)
+                $stmtFat = $pdo->prepare("SELECT SUM(valor) FROM pagamentos WHERE strftime('%Y-%m', data_pagamento) = ?");
+                $stmtFat->execute([$mes]);
+                $graficos['faturamento'][] = (float)$stmtFat->fetchColumn();
+
+                // Despesas Variáveis
+                $stmtDesp = $pdo->prepare("SELECT SUM(valor) FROM despesas WHERE strftime('%Y-%m', data_despesa) = ?");
+                $stmtDesp->execute([$mes]);
+                $graficos['despesas'][] = (float)$stmtDesp->fetchColumn() + (float)$total_despesas_fixas;
+            }
+
+            // [NOVO] Gráfico de Pizza (Categorias de Despesas do mês atual)
+            $stmtCat = $pdo->prepare("SELECT categoria, SUM(valor) as total FROM despesas WHERE strftime('%Y-%m', data_despesa) = ? GROUP BY categoria");
+            $stmtCat->execute([$mesAtual]);
+            $cats = $stmtCat->fetchAll();
+            foreach ($cats as $c) {
+                $graficos['despesas_categorias']['labels'][] = $c['categoria'];
+                $graficos['despesas_categorias']['data'][] = (float)$c['total'];
+            }
+            if ($total_despesas_fixas > 0) {
+                $graficos['despesas_categorias']['labels'][] = 'Fixas';
+                $graficos['despesas_categorias']['data'][] = (float)$total_despesas_fixas;
+            }
+
+            // [NOVO] Lembretes de Manutenção Preventiva
+            $stmtPreventivas = $pdo->query("
+                SELECT s.id, s.data_servico, c.nome as cliente_nome, c.telefone as cliente_telefone 
+                FROM servicos s
+                JOIN clientes c ON s.cliente_id = c.id
+                JOIN servicos_itens i ON s.id = i.servico_id
+                WHERE (i.descricao LIKE '%Limpeza%' OR i.descricao LIKE '%Higieniza%' OR i.descricao LIKE '%Preventiva%')
+                AND s.data_servico <= date('now', '-6 months')
+                AND s.id = (SELECT MAX(id) FROM servicos WHERE cliente_id = c.id) -- O cliente não fez nenhum outro serviço mais recente
+                GROUP BY s.id
+                ORDER BY s.data_servico ASC
+                LIMIT 6
+            ");
+            $preventivas = $stmtPreventivas->fetchAll();
+        }
+
         // Chama a view e passa os dados
         return view('index', [
             'servicos' => $servicos,
             'dashboard' => $dashboard,
-            'clientes' => $clientes
+            'clientes' => $clientes,
+            'graficos' => $graficos,
+            'preventivas' => $preventivas
         ]);
     }
 

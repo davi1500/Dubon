@@ -169,6 +169,67 @@ $dias_semana_map = [
             </div>
         </div>
     </div>
+    
+    <!-- [NOVO] Gráficos e Preventivas -->
+    <div class="row g-4 mb-4">
+        <!-- Gráfico Barras -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100 rounded-4">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h6 class="fw-bold text-secondary mb-0"><i class="bi bi-bar-chart-fill text-primary"></i> Faturamento vs Despesas (6 Meses)</h6>
+                </div>
+                <div class="card-body px-4 pb-4">
+                    <canvas id="chartEvolucao" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <!-- Gráfico Pizza -->
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm h-100 rounded-4">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h6 class="fw-bold text-secondary mb-0"><i class="bi bi-pie-chart-fill text-warning"></i> Onde o dinheiro foi? (Este Mês)</h6>
+                </div>
+                <div class="card-body px-4 pb-4 d-flex align-items-center justify-content-center">
+                    <canvas id="chartCategorias" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <!-- Lembretes Preventiva -->
+        <div class="col-lg-3">
+            <div class="card border-0 shadow-sm h-100 rounded-4">
+                <div class="card-header bg-white border-0 pt-4 px-4">
+                    <h6 class="fw-bold text-danger mb-0"><i class="bi bi-bell-fill"></i> Alerta de Preventivas</h6>
+                    <small class="text-muted" style="font-size: 0.75rem;">Limpezas feitas há +6 meses</small>
+                </div>
+                <div class="card-body px-3 pb-3" style="max-height: 250px; overflow-y: auto;">
+                    <?php if(empty($preventivas)): ?>
+                        <div class="text-center text-muted mt-4">Nenhum alerta pendente.</div>
+                    <?php else: ?>
+                        <ul class="list-group list-group-flush">
+                            <?php foreach($preventivas as $prev): 
+                                $meses = (int)date_diff(date_create($prev['data_servico']), date_create('now'))->format('%m') + (12 * (int)date_diff(date_create($prev['data_servico']), date_create('now'))->format('%y'));
+                                $telefoneLimpo = preg_replace('/[^0-9]/', '', $prev['cliente_telefone'] ?? '');
+                                if(strlen($telefoneLimpo) >= 10 && substr($telefoneLimpo, 0, 2) !== '55') $telefoneLimpo = '55'.$telefoneLimpo;
+                                $msgWpp = urlencode("Olá {$prev['cliente_nome']}! Sou da Dubom Refrigeração. Verifiquei aqui no nosso sistema que já faz {$meses} meses desde a nossa última visita de limpeza. Vamos agendar uma preventiva para manter o equipamento gelando e economizando energia?");
+                            ?>
+                            <li class="list-group-item px-1 py-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="text-truncate">
+                                        <strong class="d-block text-truncate" style="font-size: 0.85rem;"><?php echo htmlspecialchars($prev['cliente_nome']); ?></strong>
+                                        <small class="text-muted d-block" style="font-size: 0.75rem;">Há <?php echo $meses; ?> meses</small>
+                                    </div>
+                                    <?php if($telefoneLimpo): ?>
+                                    <a href="https://wa.me/<?php echo $telefoneLimpo; ?>?text=<?php echo $msgWpp; ?>" target="_blank" class="btn btn-sm btn-success rounded-circle" title="Chamar no WhatsApp"><i class="bi bi-whatsapp"></i></a>
+                                    <?php endif; ?>
+                                </div>
+                            </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
     <?php endif; ?>
 
     <!-- Kanban de Serviços -->
@@ -278,6 +339,56 @@ $dias_semana_map = [
 </a>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Carrega o Chart.js para os gráficos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<?php if (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin'): ?>
+<script>
+    const graficosData = <?php echo json_encode($graficos ?? []); ?>;
+
+    // Gráfico de Barras (Evolução)
+    const ctxEvolucao = document.getElementById('chartEvolucao');
+    if(ctxEvolucao && graficosData.meses) {
+        new Chart(ctxEvolucao, {
+            type: 'bar',
+            data: {
+                labels: graficosData.meses,
+                datasets: [
+                    { label: 'Faturamento (Recebido)', data: graficosData.faturamento, backgroundColor: '#198754', borderRadius: 4 },
+                    { label: 'Despesas (Saídas)', data: graficosData.despesas, backgroundColor: '#dc3545', borderRadius: 4 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+
+    // Gráfico de Pizza (Despesas do Mês)
+    const ctxCategorias = document.getElementById('chartCategorias');
+    if(ctxCategorias && graficosData.despesas_categorias && graficosData.despesas_categorias.labels.length > 0) {
+        new Chart(ctxCategorias, {
+            type: 'doughnut',
+            data: {
+                labels: graficosData.despesas_categorias.labels,
+                datasets: [{
+                    data: graficosData.despesas_categorias.data,
+                    backgroundColor: ['#0d6efd', '#ffc107', '#dc3545', '#198754', '#6c757d', '#6610f2', '#fd7e14'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
+            }
+        });
+    } else if (ctxCategorias) {
+        ctxCategorias.parentElement.innerHTML = '<span class="text-muted small">Sem despesas neste mês.</span>';
+    }
+</script>
+<?php endif; ?>
+
 <script>
 
     // Função para mostrar itens ocultos

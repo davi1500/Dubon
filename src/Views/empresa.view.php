@@ -30,6 +30,9 @@
             <h3 class="fw-bold text-primary mb-0"><i class="bi bi-building-gear"></i> Dados da Empresa</h3>
             <p class="text-muted mb-0">Edite as informações que aparecem na Ordem de Serviço</p>
         </div>
+        <a href="<?php echo BASE_URL; ?>/backup.php" class="btn btn-warning rounded-pill px-4 shadow-sm fw-bold">
+            <i class="bi bi-database-down"></i> Baixar Backup
+        </a>
     </div>
 
     <form action="<?php echo BASE_URL; ?>/empresa/salvar" method="POST" enctype="multipart/form-data" class="card border-0 shadow-sm p-4 rounded-4">

@@ -98,17 +98,20 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
                             <?php if ($is_edit && !empty($servico['itens'])): ?>
                                 <?php foreach($servico['itens'] as $item): ?>
                                     <div class="row g-2 mb-2 item-linha">
-                                        <div class="col-12 col-md-6 position-relative item-input-wrapper">
+                                        <div class="col-12 col-md-4 position-relative item-input-wrapper">
                                             <div class="input-group">
                                                 <span class="input-group-text bg-white border-end-0 icon-view"><i class="bi bi-tools text-muted"></i></span>
-                                                <input type="text" name="item_descricao[]" class="form-control border-start-0 ps-2 item-desc" placeholder="Descrição (ex: Limpeza Split)" oninput="mostrarSugestoes(this)" required autocomplete="off" value="<?php echo htmlspecialchars($item['descricao']); ?>">
+                                                <input type="text" name="item_descricao[]" class="form-control border-start-0 ps-2 item-desc" placeholder="Buscar no catálogo..." oninput="mostrarSugestoes(this)" onblur="validarSelecao(this)" onkeydown="if(event.key === 'Enter') { event.preventDefault(); return false; }" data-original-value="<?php echo htmlspecialchars($item['descricao']); ?>" required autocomplete="off" value="<?php echo htmlspecialchars($item['descricao']); ?>">
                                             </div>
                                             <ul class="list-group sugestoes-lista shadow"></ul>
                                         </div>
-                                        <div class="col-4 col-md-2">
+                                        <div class="col-12 col-md-4">
+                                            <input type="text" name="item_complemento[]" class="form-control" placeholder="Detalhes (Ex: Trocado a placa)" value="<?php echo htmlspecialchars($item['complemento'] ?? ''); ?>">
+                                        </div>
+                                        <div class="col-4 col-md-1">
                                             <input type="number" name="item_qtd[]" class="form-control" placeholder="Qtd" value="<?php echo $item['quantidade'] ?? 1; ?>" min="1" oninput="recalculateAll()">
                                         </div>
-                                        <div class="col-6 col-md-3">
+                                        <div class="col-6 col-md-2">
                                             <div class="input-group">
                                                 <span class="input-group-text">R$</span>
                                                 <input type="text" name="item_valor[]" class="form-control" placeholder="0,00" value="<?php echo number_format($item['valor'] ?? 0, 2, ',', '.'); ?>" oninput="recalculateAll()">
@@ -122,15 +125,18 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
                             <?php else: ?>
                                 <!-- Item Padrão -->
                                 <div class="row g-2 mb-2 item-linha">
-                                    <div class="col-12 col-md-6 position-relative item-input-wrapper">
+                                    <div class="col-12 col-md-4 position-relative item-input-wrapper">
                                         <div class="input-group">
                                             <span class="input-group-text bg-white border-end-0 icon-view"><i class="bi bi-tools text-muted"></i></span>
-                                            <input type="text" name="item_descricao[]" class="form-control border-start-0 ps-2 item-desc" placeholder="Descrição (ex: Limpeza Split)" oninput="mostrarSugestoes(this)" required autocomplete="off">
+                                            <input type="text" name="item_descricao[]" class="form-control border-start-0 ps-2 item-desc" placeholder="Buscar no catálogo..." oninput="mostrarSugestoes(this)" onblur="validarSelecao(this)" onkeydown="if(event.key === 'Enter') { event.preventDefault(); return false; }" required autocomplete="off">
                                         </div>
                                         <ul class="list-group sugestoes-lista shadow"></ul>
                                     </div>
-                                    <div class="col-4 col-md-2"><input type="number" name="item_qtd[]" class="form-control" placeholder="Qtd" value="1" min="1" oninput="recalculateAll()"></div>
-                                    <div class="col-6 col-md-3">
+                                    <div class="col-12 col-md-4">
+                                        <input type="text" name="item_complemento[]" class="form-control" placeholder="Detalhes (Ex: Trocado a placa)">
+                                    </div>
+                                    <div class="col-4 col-md-1"><input type="number" name="item_qtd[]" class="form-control" placeholder="Qtd" value="1" min="1" oninput="recalculateAll()"></div>
+                                    <div class="col-6 col-md-2">
                                         <div class="input-group">
                                             <span class="input-group-text">R$</span>
                                             <input type="text" name="item_valor[]" class="form-control" placeholder="0,00" oninput="recalculateAll()">
@@ -252,11 +258,10 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
     const listaProdutos = <?php echo json_encode($produtos); ?>;
     
     // --- DEFINIÇÃO DOS PACOTES (KIT INSTALAÇÃO) ---
-    // Ajuste aqui para bater com a realidade do seu pai
     const pacotesDefinidos = {
         'inst_9000': {
             titulo: 'Instalação Split 9.000/12.000 BTUs (Padrão 3m)',
-            servico: { desc: 'Mão de Obra de Instalação (Split)', valor: 350.00 },
+            servico: { desc: 'Instalação Split 9000/12000 BTUs', comp: 'Tubulação padrão 3m', valor: 350.00 },
             pecas: [
                 { keyword: 'Cobre 1/4', qtd: 3 }, // 3 metros
                 { keyword: 'Cobre 3/8', qtd: 3 }, // 3 metros
@@ -269,7 +274,7 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
         },
         'inst_18000': {
             titulo: 'Instalação Split 18.000 BTUs (Padrão 3m)',
-            servico: { desc: 'Mão de Obra de Instalação (18k)', valor: 450.00 },
+            servico: { desc: 'Instalação Split 18000/24000 BTUs', comp: 'Tubulação padrão 3m', valor: 450.00 },
             pecas: [
                 { keyword: 'Cobre 1/4', qtd: 3 },
                 { keyword: 'Cobre 1/2', qtd: 3 },
@@ -282,7 +287,7 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
         },
         'carga_gas': {
             titulo: 'Carga de Gás Completa',
-            servico: { desc: 'Mão de Obra e Vácuo', valor: 200.00 },
+            servico: { desc: 'Carga de Fluido Refrigerante (Gás)', comp: 'Mão de Obra e Vácuo', valor: 200.00 },
             pecas: [
                 { keyword: 'Gás', qtd: 1 } // Vai puxar o primeiro gás que achar, usuário ajusta qual é
             ]
@@ -316,6 +321,7 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
         adicionarLinha(); // Cria a linha vazia
         const rowServ = document.querySelector('#listaItens .item-linha:last-child');
         rowServ.querySelector('.item-desc').value = pct.servico.desc;
+        rowServ.querySelector('input[name="item_complemento[]"]').value = pct.servico.comp || '';
         rowServ.querySelector('input[name="item_valor[]"]').value = formatCurrencyForInput(pct.servico.valor);
 
         // 3. Adiciona as Peças Automaticamente
@@ -357,15 +363,18 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
         const div = document.createElement('div');
         div.className = 'row g-2 mb-2 item-linha';
         div.innerHTML = `
-            <div class="col-12 col-md-6 position-relative item-input-wrapper">
+            <div class="col-12 col-md-4 position-relative item-input-wrapper">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0 icon-view"><i class="bi bi-tools text-muted"></i></span>
-                    <input type="text" name="item_descricao[]" class="form-control border-start-0 ps-2 item-desc" placeholder="Descrição" oninput="mostrarSugestoes(this)" required autocomplete="off">
+                    <input type="text" name="item_descricao[]" class="form-control border-start-0 ps-2 item-desc" placeholder="Buscar no catálogo..." oninput="mostrarSugestoes(this)" onblur="validarSelecao(this)" onkeydown="if(event.key === 'Enter') { event.preventDefault(); return false; }" required autocomplete="off">
                 </div>
                 <ul class="list-group sugestoes-lista shadow"></ul>
             </div>
-            <div class="col-4 col-md-2"><input type="number" name="item_qtd[]" class="form-control" value="1" min="1" oninput="recalculateAll()"></div>
-            <div class="col-6 col-md-3"><div class="input-group"><span class="input-group-text">R$</span><input type="text" name="item_valor[]" class="form-control" placeholder="0,00" oninput="recalculateAll()"></div></div>
+            <div class="col-12 col-md-4">
+                <input type="text" name="item_complemento[]" class="form-control" placeholder="Detalhes (Ex: Trocado a placa)">
+            </div>
+            <div class="col-4 col-md-1"><input type="number" name="item_qtd[]" class="form-control" value="1" min="1" oninput="recalculateAll()"></div>
+            <div class="col-6 col-md-2"><div class="input-group"><span class="input-group-text">R$</span><input type="text" name="item_valor[]" class="form-control" placeholder="0,00" oninput="recalculateAll()"></div></div>
             <div class="col-2 col-md-1"><button type="button" class="btn btn-outline-danger w-100" onclick="removerLinha(this)"><i class="bi bi-trash"></i></button></div>
         `;
         document.getElementById('listaItens').appendChild(div);
@@ -649,6 +658,31 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
 
         // Dispara o recálculo
         recalculateAll();
+    }
+
+    // Valida se o serviço digitado existe no catálogo
+    function validarSelecao(input) {
+        // Um pequeno delay para permitir que o clique na sugestão aconteça antes do blur
+        setTimeout(() => {
+            const termo = input.value.trim().toLowerCase();
+            if (!termo) return;
+
+            // Permite manter o valor antigo se for edição de OS antiga (evita apagar coisas legadas)
+            const originalValue = input.getAttribute('data-original-value');
+            if (originalValue && termo === originalValue.toLowerCase()) {
+                return;
+            }
+
+            const existe = catalogo.find(item => item.nome.toLowerCase() === termo);
+            
+            if (!existe) {
+                input.value = '';
+                alert('Atenção: Você deve selecionar um serviço da lista (Catálogo).\nSe o serviço não existe, escolha "Outros" ou cadastre-o primeiro no Catálogo.');
+                const iconContainer = input.closest('.item-linha').querySelector('.icon-view i');
+                if (iconContainer) iconContainer.className = 'bi bi-tools text-muted';
+                recalculateAll();
+            }
+        }, 200);
     }
 
     // Fecha as sugestões se clicar fora
