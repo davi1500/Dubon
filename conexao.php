@@ -25,17 +25,20 @@ try {
     } catch (Exception $e) {
         // O erro "no such table" indica que as migrações não foram executadas.
         if (strpos($e->getMessage(), 'no such table') !== false) {
-            die("
-                <div style='font-family: sans-serif; padding: 2rem; background: #fff3f3; border: 1px solid #ffc0c0; margin: 2rem;'>
-                    <h1 style='color: #d8000c;'>Erro: Banco de Dados não Inicializado</h1>
-                    <p>As tabelas do sistema ainda não foram criadas.</p>
-                    <p>Por favor, acesse o arquivo <strong>migracoes.php</strong> no seu navegador para configurar o banco de dados pela primeira vez.</p>
-                    <p>Exemplo: <code>http://localhost:8000/migracoes.php</code></p>
-                </div>
-            ");
+            // Se já estiver na página de migrações, não bloqueia a execução para permitir a recriação
+            if (basename($_SERVER['SCRIPT_NAME']) !== 'migracoes.php') {
+                die("
+                    <div style='font-family: sans-serif; padding: 2rem; background: #fff3f3; border: 1px solid #ffc0c0; margin: 2rem;'>
+                        <h1 style='color: #d8000c;'>Erro: Banco de Dados não Inicializado</h1>
+                        <p>As tabelas do sistema ainda não foram criadas.</p>
+                        <p>Por favor, acesse o arquivo <strong>migracoes.php</strong> no seu navegador para configurar o banco de dados pela primeira vez.</p>
+                    </div>
+                ");
+            }
+        } else {
+            // Se for outro erro, exibe normalmente.
+            die("Erro de conexão com o banco de dados: " . $e->getMessage());
         }
-        // Se for outro erro, exibe normalmente.
-        die("Erro de conexão com o banco de dados: " . $e->getMessage());
     }
 
 } catch (PDOException $e) {
