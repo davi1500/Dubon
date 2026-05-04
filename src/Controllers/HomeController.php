@@ -69,7 +69,8 @@ class HomeController
             foreach ($servicos as $s) {
                 // Calcula quanto já foi pago nessa OS
                 $val_pago = ($s['status'] === 'Pago') ? $s['valor_total'] : ($s['valor_pago'] ?? 0);
-                if ($s['status'] !== 'Pago') {
+                // Soma apenas os serviços que já foram finalizados (Concluídos) e não pagos
+                if ($s['status'] === 'Concluido' || $s['status'] === 'Concluído') {
                     $dashboard['pendente'] += ($s['valor_total'] - $val_pago);
                 }
             }
@@ -128,14 +129,17 @@ class HomeController
                 $cliente_endereco = $_POST['cliente_endereco'] ?? '';
                 $data_servico = $_POST['data_servico'] ?? date('Y-m-d');
                 $status = $_POST['status'] ?? 'Agendado';
-                $obs = $_POST['obs'] ?? '';
-                $laudo_tecnico = $_POST['laudo_tecnico'] ?? '';
+                
+                // [CORREÇÃO] Inversão: O form envia o Laudo no name 'obs' e o Interno no name 'laudo_tecnico'
+                $obs = $_POST['laudo_tecnico'] ?? ''; // Observações Internas (Não aparece na OS)
+                $laudo_tecnico = $_POST['obs'] ?? ''; // Laudo Técnico (Visível para o cliente)
                 $garantia = $_POST['garantia'] ?? 90;
                 // Converte o valor de moeda BRL para um float válido
                 $desconto = floatval(str_replace(',', '.', str_replace('.', '', $_POST['desconto'] ?? '0')));
                 
                 // Arrays dos itens (descrição, valor, quantidade)
                 $itens_desc = $_POST['item_descricao'] ?? [];
+                $itens_comp = $_POST['item_complemento'] ?? [];
                 $itens_valor = $_POST['item_valor'] ?? [];
                 $itens_qtd = $_POST['item_qtd'] ?? [];
 
@@ -181,13 +185,14 @@ class HomeController
                 $valor_total_servico = 0;
 
                 // 4. Insere os Itens
-                $stmtItem = $pdo->prepare("INSERT INTO servicos_itens (servico_id, descricao, valor, quantidade) VALUES (?, ?, ?, ?)");
+                $stmtItem = $pdo->prepare("INSERT INTO servicos_itens (servico_id, descricao, complemento, valor, quantidade) VALUES (?, ?, ?, ?, ?)");
                 
                 for ($i = 0; $i < count($itens_desc); $i++) {
                     if (!empty($itens_desc[$i])) {
+                        $comp = $itens_comp[$i] ?? '';
                         $vlr = floatval(str_replace(',', '.', str_replace('.', '', $itens_valor[$i])));
                         $qtd = $itens_qtd[$i] < 1 ? 1 : $itens_qtd[$i];
-                        $stmtItem->execute([$servico_id, $itens_desc[$i], $vlr, $qtd]);
+                        $stmtItem->execute([$servico_id, $itens_desc[$i], $comp, $vlr, $qtd]);
                         $valor_total_servico += ($vlr * $qtd);
                     }
                 }
@@ -219,14 +224,15 @@ class HomeController
                 // 6. Atualiza o valor total e pago do serviço
                 $valor_final = $valor_total_servico - $desconto;
                 
-                $valor_pago_final = 0;
-                if ($status === 'Pago') {
-                    $valor_pago_final = $valor_final;
+                // Atualiza o valor total na OS recém-criada (valor_pago começa como 0)
+                $stmtUpdateTotal = $pdo->prepare("UPDATE servicos SET valor_total = ?, valor_pago = 0 WHERE id = ?");
+                $stmtUpdateTotal->execute([$valor_final, $servico_id]);
+                
+                // Se já marcou como Pago na criação, insere o pagamento integral automático
+                if ($status === 'Pago' && $valor_final > 0) {
+                    $pdo->prepare("INSERT INTO pagamentos (servico_id, valor, forma_pagamento) VALUES (?, ?, 'Dinheiro')")->execute([$servico_id, $valor_final]);
+                    $pdo->prepare("UPDATE servicos SET valor_pago = ? WHERE id = ?")->execute([$valor_final, $servico_id]);
                 }
-
-                // Atualiza o valor total e o valor pago na OS recém-criada
-                $stmtUpdateTotal = $pdo->prepare("UPDATE servicos SET valor_total = ?, valor_pago = ? WHERE id = ?");
-                $stmtUpdateTotal->execute([$valor_final, $valor_pago_final, $servico_id]);
 
                 $pdo->commit();
                 $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Ordem de Serviço criada com sucesso!'];
@@ -266,6 +272,11 @@ class HomeController
             WHERE sp.servico_id = ?");
         $stmtProds->execute([$id]);
         $servico['produtos'] = $stmtProds->fetchAll();
+
+        // 2.2 Busca os pagamentos
+        $stmtPag = $pdo->prepare("SELECT * FROM pagamentos WHERE servico_id = ? ORDER BY data_pagamento DESC");
+        $stmtPag->execute([$id]);
+        $servico['pagamentos'] = $stmtPag->fetchAll();
 
         // 3. Busca dados auxiliares (clientes, catalogo)
         $stmtClientes = $pdo->query("SELECT id, nome FROM clientes ORDER BY nome ASC");
@@ -316,6 +327,11 @@ class HomeController
             WHERE sp.servico_id = ?");
         $stmtProds->execute([$id]);
         $servico['produtos'] = $stmtProds->fetchAll();
+
+        // 3.1 Busca os pagamentos
+        $stmtPag = $pdo->prepare("SELECT * FROM pagamentos WHERE servico_id = ? ORDER BY data_pagamento DESC");
+        $stmtPag->execute([$id]);
+        $servico['pagamentos'] = $stmtPag->fetchAll();
 
         // 4. Busca dados da empresa para o cabeçalho
         $empresa = [];
@@ -387,13 +403,16 @@ class HomeController
                 $cliente_endereco = $_POST['cliente_endereco'] ?? '';
                 $data_servico = $_POST['data_servico'] ?? date('Y-m-d');
                 $status = $_POST['status'] ?? 'Agendado';
-                $obs = $_POST['obs'] ?? '';
-                $laudo_tecnico = $_POST['laudo_tecnico'] ?? '';
+                
+                // [CORREÇÃO] Inversão: O form envia o Laudo no name 'obs' e o Interno no name 'laudo_tecnico'
+                $obs = $_POST['laudo_tecnico'] ?? ''; // Observações Internas (Não aparece na OS)
+                $laudo_tecnico = $_POST['obs'] ?? ''; // Laudo Técnico (Visível para o cliente)
                 $garantia = $_POST['garantia'] ?? 90;
                 $desconto = floatval(str_replace(',', '.', str_replace('.', '', $_POST['desconto'] ?? '0')));
                 
                 // Arrays dos itens
                 $itens_desc = $_POST['item_descricao'] ?? [];
+                $itens_comp = $_POST['item_complemento'] ?? [];
                 $itens_valor = $_POST['item_valor'] ?? [];
                 $itens_qtd = $_POST['item_qtd'] ?? [];
 
@@ -465,26 +484,34 @@ class HomeController
                 }
                 $valor_final = $valor_total_itens - $desconto;
 
-                // [CORREÇÃO] Define o valor pago com base no status
-                $valor_pago_final = 0;
-                if ($status === 'Pago') {
-                    $valor_pago_final = $valor_final;
-                }
+                // 3. Atualiza o serviço principal (SEM mexer no valor_pago ainda para não quebrar o histórico)
+                $stmt = $pdo->prepare("UPDATE servicos SET cliente = ?, cliente_id = ?, data_servico = ?, status = ?, valor_total = ?, desconto = ?, garantia = ?, obs = ?, laudo_tecnico = ? WHERE id = ?");
+                $stmt->execute([$cliente_nome, $cliente_id, $data_servico, $status, $valor_final, $desconto, $garantia, $obs, $laudo_tecnico, $id]);
 
-                // 3. Atualiza o serviço principal
-                $stmt = $pdo->prepare("UPDATE servicos SET cliente = ?, cliente_id = ?, data_servico = ?, status = ?, valor_total = ?, desconto = ?, valor_pago = ?, garantia = ?, obs = ?, laudo_tecnico = ? WHERE id = ?");
-                $stmt->execute([$cliente_nome, $cliente_id, $data_servico, $status, $valor_final, $desconto, $valor_pago_final, $garantia, $obs, $laudo_tecnico, $id]);
+                // Se mudou o status para Pago no seletor e ainda não estava totalmente pago, insere o restante
+                $stmtCheckPago = $pdo->prepare("SELECT valor_pago FROM servicos WHERE id = ?");
+                $stmtCheckPago->execute([$id]);
+                $valor_pago_atual = $stmtCheckPago->fetchColumn();
+                
+                if ($status === 'Pago' && $valor_pago_atual < $valor_final) {
+                    $restante = $valor_final - $valor_pago_atual;
+                    if ($restante > 0) {
+                        $pdo->prepare("INSERT INTO pagamentos (servico_id, valor, forma_pagamento) VALUES (?, ?, 'Dinheiro')")->execute([$id, $restante]);
+                        $pdo->prepare("UPDATE servicos SET valor_pago = ? WHERE id = ?")->execute([$valor_final, $id]);
+                    }
+                }
 
                 // 4. Deleta os itens antigos para reinserir os novos
                 $pdo->prepare("DELETE FROM servicos_itens WHERE servico_id = ?")->execute([$id]);
 
                 // 5. Insere os novos itens
-                $stmtItem = $pdo->prepare("INSERT INTO servicos_itens (servico_id, descricao, valor, quantidade) VALUES (?, ?, ?, ?)");
+                $stmtItem = $pdo->prepare("INSERT INTO servicos_itens (servico_id, descricao, complemento, valor, quantidade) VALUES (?, ?, ?, ?, ?)");
                 for ($i = 0; $i < count($itens_desc); $i++) {
                     if (!empty($itens_desc[$i])) {
+                        $comp = $itens_comp[$i] ?? '';
                         $vlr = floatval(str_replace(',', '.', str_replace('.', '', $itens_valor[$i])));
                         $qtd = $itens_qtd[$i] < 1 ? 1 : $itens_qtd[$i];
-                        $stmtItem->execute([$id, $itens_desc[$i], $vlr, $qtd]);
+                        $stmtItem->execute([$id, $itens_desc[$i], $comp, $vlr, $qtd]);
                     }
                 }
 
@@ -565,6 +592,66 @@ class HomeController
         }
 
         header('Location: ' . BASE_URL . '/');
+        exit;
+    }
+
+    // --- NOVAS FUNÇÕES DE PAGAMENTO PARCIAL ---
+    public function storePagamento($id)
+    {
+        global $pdo;
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            try {
+                $valor = floatval(str_replace(',', '.', str_replace('.', '', $_POST['valor'] ?? '0')));
+                $forma = $_POST['forma_pagamento'] ?? 'Dinheiro';
+                $data = $_POST['data_pagamento'] ?? date('Y-m-d H:i:s');
+
+                if ($valor <= 0) throw new Exception("Valor do pagamento inválido.");
+
+                $pdo->beginTransaction();
+                // 1. Insere o histórico
+                $stmtIns = $pdo->prepare("INSERT INTO pagamentos (servico_id, valor, forma_pagamento, data_pagamento) VALUES (?, ?, ?, ?)");
+                $stmtIns->execute([$id, $valor, $forma, $data]);
+
+                // 2. Atualiza a soma total na OS
+                $stmtUpdate = $pdo->prepare("UPDATE servicos SET valor_pago = (SELECT SUM(valor) FROM pagamentos WHERE servico_id = ?) WHERE id = ?");
+                $stmtUpdate->execute([$id, $id]);
+
+                // 3. Atualiza status se quitou
+                $stmtCheck = $pdo->prepare("SELECT valor_total, valor_pago, status FROM servicos WHERE id = ?");
+                $stmtCheck->execute([$id]);
+                $os = $stmtCheck->fetch();
+                if ($os['valor_pago'] >= $os['valor_total'] && $os['status'] !== 'Pago') {
+                    $pdo->prepare("UPDATE servicos SET status = 'Pago' WHERE id = ?")->execute([$id]);
+                }
+                $pdo->commit();
+                $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Pagamento registrado!'];
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Erro ao registrar pagamento: ' . $e->getMessage()];
+            }
+            header('Location: ' . BASE_URL . "/servicos/ver/{$id}");
+            exit;
+        }
+    }
+
+    public function deletePagamento($id, $pagamento_id)
+    {
+        global $pdo;
+        try {
+            $pdo->beginTransaction();
+            // Deleta o pagamento e atualiza a OS
+            $pdo->prepare("DELETE FROM pagamentos WHERE id = ? AND servico_id = ?")->execute([$pagamento_id, $id]);
+            $pdo->prepare("UPDATE servicos SET valor_pago = COALESCE((SELECT SUM(valor) FROM pagamentos WHERE servico_id = ?), 0) WHERE id = ?")->execute([$id, $id]);
+            
+            // Se era Pago e deixou de ser, volta para Concluído
+            $pdo->prepare("UPDATE servicos SET status = 'Concluído' WHERE id = ? AND status = 'Pago' AND valor_pago < valor_total")->execute([$id]);
+            $pdo->commit();
+            $_SESSION['flash_message'] = ['type' => 'success', 'message' => 'Pagamento estornado.'];
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $_SESSION['flash_message'] = ['type' => 'danger', 'message' => 'Erro: ' . $e->getMessage()];
+        }
+        header('Location: ' . BASE_URL . "/servicos/ver/{$id}");
         exit;
     }
 }

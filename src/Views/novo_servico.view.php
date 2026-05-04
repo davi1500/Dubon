@@ -189,11 +189,17 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
             <!-- Seção 3: Detalhes Finais -->
             <div class="col-md-4">
                 <label class="form-label fw-bold">Status Inicial</label>
+                <label class="form-label fw-bold"><?php echo $is_edit ? 'Status da OS' : 'Status Inicial'; ?></label>
+                <?php $status_atual = $is_edit ? ($servico['status'] ?? 'Agendado') : 'Agendado'; ?>
                 <select name="status" id="statusSelect" class="form-select fw-bold border-0 bg-info bg-opacity-10 text-info" onchange="atualizarCorStatus(this)">
                     <option value="Agendado" class="text-dark" <?php echo ($is_edit && $servico['status'] == 'Agendado') ? 'selected' : ''; ?>>📅 Agendado</option>
                     <option value="Em Andamento" class="text-dark" <?php echo (!$is_edit || ($is_edit && $servico['status'] == 'Em Andamento')) ? 'selected' : ''; ?>>🔧 Em Andamento</option>
                     <option value="Concluido" class="text-dark" <?php echo ($is_edit && $servico['status'] == 'Concluido') ? 'selected' : ''; ?>>⚠️ Concluído (Aguardando Pagamento)</option>
                     <option value="Pago" class="text-dark" <?php echo ($is_edit && $servico['status'] == 'Pago') ? 'selected' : ''; ?>>💲 Pago</option>
+                    <option value="Agendado" class="text-dark" <?php echo ($status_atual === 'Agendado') ? 'selected' : ''; ?>>📅 Agendado</option>
+                    <option value="Em Andamento" class="text-dark" <?php echo ($status_atual === 'Em Andamento') ? 'selected' : ''; ?>>🔧 Em Andamento</option>
+                    <option value="Concluido" class="text-dark" <?php echo ($status_atual === 'Concluido' || $status_atual === 'Concluído') ? 'selected' : ''; ?>>⚠️ Concluído (Aguardando Pagamento)</option>
+                    <option value="Pago" class="text-dark" <?php echo ($status_atual === 'Pago') ? 'selected' : ''; ?>>💲 Pago</option>
                 </select>
             </div>
             <div class="col-md-4">

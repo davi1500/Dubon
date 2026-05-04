@@ -54,11 +54,23 @@ try {
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         servico_id INTEGER NOT NULL,
         descricao TEXT NOT NULL,
+        complemento TEXT,
         valor DECIMAL(10,2),
         quantidade INTEGER DEFAULT 1,
         categoria TEXT,
         FOREIGN KEY (servico_id) REFERENCES servicos(id) ON DELETE CASCADE
     )");
+
+    // Atualização de Schema para Itens de Serviços (Novos Campos)
+    // Garante que a coluna exista mesmo se a tabela já foi criada anteriormente
+    $cols_itens = ['complemento' => 'TEXT'];
+    foreach ($cols_itens as $col => $type) {
+        try {
+            $pdo->exec("ALTER TABLE servicos_itens ADD COLUMN $col $type");
+        } catch (Exception $e) {
+            // Coluna já existe, ignora o erro
+        }
+    }
 
     // 4. Tabela de Clientes
     $pdo->exec("CREATE TABLE IF NOT EXISTS clientes (
@@ -170,6 +182,22 @@ try {
         ativa INTEGER DEFAULT 1, -- 1 para ativa, 0 para inativa
         obs TEXT
     )");
+
+    // 14. Tabela de Histórico de Pagamentos Parciais
+    $pdo->exec("CREATE TABLE IF NOT EXISTS pagamentos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        servico_id INTEGER NOT NULL,
+        valor DECIMAL(10,2) NOT NULL,
+        data_pagamento DATETIME DEFAULT CURRENT_TIMESTAMP,
+        forma_pagamento TEXT,
+        FOREIGN KEY (servico_id) REFERENCES servicos(id) ON DELETE CASCADE
+    )");
+    
+    // Migração de dados de pagamentos antigos (Cria histórico para OSs já pagas)
+    $pdo->exec("INSERT INTO pagamentos (servico_id, valor, forma_pagamento, data_pagamento)
+                SELECT id, valor_pago, 'Dinheiro/Migração', COALESCE(data_servico, CURRENT_TIMESTAMP)
+                FROM servicos 
+                WHERE valor_pago > 0 AND id NOT IN (SELECT servico_id FROM pagamentos)");
 
     echo "<p class='log success'>✔ Tabelas criadas/verificadas com sucesso.</p>";
 

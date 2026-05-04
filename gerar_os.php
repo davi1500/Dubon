@@ -30,6 +30,11 @@ $stmtItens = $pdo->prepare("SELECT * FROM servicos_itens WHERE servico_id = ?");
 $stmtItens->execute([$id]);
 $itens = $stmtItens->fetchAll();
 
+// Busca os pagamentos
+$stmtPagamentos = $pdo->prepare("SELECT * FROM pagamentos WHERE servico_id = ? ORDER BY data_pagamento ASC");
+$stmtPagamentos->execute([$id]);
+$pagamentos = $stmtPagamentos->fetchAll();
+
 // Formatações
 $dataServico = date('d/m/Y', strtotime($servico['data_servico']));
 $valorTotal = number_format($servico['valor_total'], 2, ',', '.');
@@ -68,10 +73,11 @@ $mensagemWpp = "Olá, *{$nomeCliente}*! 👋\n\n";
 $mensagemWpp .= "Segue o resumo da sua *{$tituloDoc} Nº {$id}* da Dubom Refrigeração:\n\n";
 
 foreach($itens as $item) {
-    $mensagemWpp .= "✅ " . $item['descricao'] . " (Qtd: " . $item['quantidade'] . ")\n";
+    $compText = !empty($item['complemento']) ? " - " . $item['complemento'] : "";
+    $mensagemWpp .= "✅ " . $item['descricao'] . $compText . " (Qtd: " . $item['quantidade'] . ")\n";
 }
 if (empty($itens)) { // Fallback para OSs antigas
-    $mensagemWpp .= "✅ " . ($servico['obs'] ?: 'Serviço de Refrigeração') . "\n";
+    $mensagemWpp .= "✅ " . ($servico['laudo_tecnico'] ?: 'Serviço de Refrigeração') . "\n";
 }
 
 $mensagemWpp .= "\n*Valor Total: R$ {$valorTotal}*\n";
@@ -190,7 +196,10 @@ $linkWpp = "https://wa.me/{$telefoneLimpo}?text=" . urlencode($mensagemWpp);
             <?php if (count($itens) > 0): ?>
                 <?php foreach($itens as $item): ?>
                 <tr>
-                    <td><?php echo $item['descricao']; ?></td>
+                    <td>
+                        <strong><?php echo htmlspecialchars($item['descricao']); ?></strong>
+                        <?php if (!empty($item['complemento'])): ?><br><small class="text-muted"><?php echo nl2br(htmlspecialchars($item['complemento'])); ?></small><?php endif; ?>
+                    </td>
                     <td class="text-center"><?php echo $item['quantidade']; ?></td>
                     <td class="text-end">R$ <?php echo number_format($item['valor'], 2, ',', '.'); ?></td>
                     <td class="text-end">R$ <?php echo number_format($item['valor'] * $item['quantidade'], 2, ',', '.'); ?></td>
@@ -199,7 +208,7 @@ $linkWpp = "https://wa.me/{$telefoneLimpo}?text=" . urlencode($mensagemWpp);
             <?php else: ?>
                 <!-- Fallback para serviços antigos sem itens detalhados -->
                 <tr>
-                    <td><?php echo $servico['obs'] ?: 'Serviço de Refrigeração'; ?></td>
+                <td><?php echo $servico['laudo_tecnico'] ?: 'Serviço de Refrigeração'; ?></td>
                     <td class="text-center">1</td>
                     <td class="text-end">R$ <?php echo $valorTotal; ?></td>
                     <td class="text-end">R$ <?php echo $valorTotal; ?></td>
@@ -212,9 +221,21 @@ $linkWpp = "https://wa.me/{$telefoneLimpo}?text=" . urlencode($mensagemWpp);
                 <td class="text-end fw-bold bg-light">R$ <?php echo $valorTotal; ?></td>
             </tr>
             <?php if($servico['valor_pago'] > 0): ?>
+            <?php if(count($pagamentos) > 0): ?>
             <tr>
-                <td colspan="3" class="text-end text-success">Valor Pago</td>
-                <td class="text-end text-success">R$ <?php echo $valorPago; ?></td>
+                <td colspan="4" class="p-0 border-0">
+                    <div class="px-3 py-2 bg-light border-bottom">
+                        <strong class="d-block mb-1">Histórico de Recebimentos (Sinais/Entradas):</strong>
+                        <?php foreach($pagamentos as $pag): ?>
+                            <small class="text-muted d-block ms-2">- <?php echo date('d/m/Y', strtotime($pag['data_pagamento'])); ?> : R$ <?php echo number_format($pag['valor'], 2, ',', '.'); ?> (<?php echo htmlspecialchars($pag['forma_pagamento']); ?>)</small>
+                        <?php endforeach; ?>
+                    </div>
+                </td>
+            </tr>
+            <?php endif; ?>
+            <tr>
+                <td colspan="3" class="text-end text-success fw-bold">Total Pago</td>
+                <td class="text-end text-success fw-bold">R$ <?php echo $valorPago; ?></td>
             </tr>
             <?php endif; ?>
             <?php if(($servico['valor_total'] - $servico['valor_pago']) > 0): ?>
@@ -228,8 +249,8 @@ $linkWpp = "https://wa.me/{$telefoneLimpo}?text=" . urlencode($mensagemWpp);
 
     <!-- Observações / Laudo -->
     <div class="box-info mb-4">
-        <h6 class="fw-bold border-bottom pb-2 mb-2">Observações / Laudo Técnico</h6>
-        <p class="mb-0"><?php echo $servico['obs'] ?: 'Serviço realizado conforme solicitado.'; ?></p>
+        <h6 class="fw-bold border-bottom pb-2 mb-2">Laudo Técnico</h6>
+        <p class="mb-0"><?php echo nl2br(htmlspecialchars($servico['laudo_tecnico'] ?: 'Serviço realizado conforme solicitado.')); ?></p>
     </div>
 
     <!-- Termos de Garantia -->
