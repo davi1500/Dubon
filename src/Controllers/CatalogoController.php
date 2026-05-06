@@ -29,11 +29,11 @@ class CatalogoController
         global $pdo;
         
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $nome = $_POST['nome'] ?? '';
+            $nome = trim($_POST['nome'] ?? '');
             $categoria_id = $_POST['categoria_id'] ?? 'outros';
-            $custo = str_replace(',', '.', $_POST['custo'] ?? 0);
-            $valor = str_replace(',', '.', $_POST['valor'] ?? 0);
-            $garantia_dias = $_POST['garantia_dias'] ?? 0;
+            $custo = (float)str_replace(',', '.', $_POST['custo'] ?: 0);
+            $valor = (float)str_replace(',', '.', $_POST['valor'] ?: 0);
+            $garantia_dias = (int)($_POST['garantia_dias'] ?: 0);
             $id = $_POST['id'] ?? null;
 
             if ($id) {

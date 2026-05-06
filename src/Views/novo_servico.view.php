@@ -669,11 +669,11 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
 
             // Permite manter o valor antigo se for edição de OS antiga (evita apagar coisas legadas)
             const originalValue = input.getAttribute('data-original-value');
-            if (originalValue && termo === originalValue.toLowerCase()) {
+            if (originalValue && termo === originalValue.trim().toLowerCase()) {
                 return;
             }
 
-            const existe = catalogo.find(item => item.nome.toLowerCase() === termo);
+            const existe = catalogo.find(item => item.nome.trim().toLowerCase() === termo);
             
             if (!existe) {
                 input.value = '';

@@ -1,6 +1,7 @@
 
 PROJETO: Sistema de Gestão - Dubom Refrigeração
 DATA DA ÚLTIMA ATUALIZAÇÃO: Junho 2026
+DATA DA ÚLTIMA ATUALIZAÇÃO: Atualizado recentemente (Dashboards, Backup, Preventivas)
 
 --- TECNOLOGIAS ---
 - Backend: PHP Puro (Arquitetura Híbrida: MVC Básico + Arquivos Legados em migração).
@@ -51,6 +52,13 @@ DATA DA ÚLTIMA ATUALIZAÇÃO: Junho 2026
    - Kanban: Visualização de status por colunas (Agendado -> Em Andamento -> Concluído -> Pago).
    - Visualização Moderna de OS: Nova tela de visualização/impressão com link direto para WhatsApp e PDF.
 
+4. PREVENÇÃO DE POLUIÇÃO DE DADOS E VENDAS:
+   - Catálogo Travado: Funcionários só podem adicionar serviços oficiais do catálogo na OS, usando o campo "Detalhes / Complemento" para especificar variações.
+   - Alerta de Preventiva: O Dashboard lista clientes que fizeram limpeza há +6 meses, com botão direto para oferecer o serviço no WhatsApp.
+   - Backup Seguro: Arquivo `.sqlite` protegido. Download restrito via `backup.php` apenas para Administradores.
+   - Dashboards Visuais: Gráficos interativos (Chart.js) comparando Faturamento vs Despesas e exibindo a distribuição de custos em Pizza.
+   - Criptografia: Senhas salvas usando `password_hash()` com migração automática no login.
+
 --- CONTEXTO DA EMPRESA (PERSONA) ---
 - Equipe: Cresceu para 4 pessoas. O dono (Pai) não trabalha mais sozinho.
 - Operação: O dono sabe endereços de cabeça, mas a equipe precisa dessa informação no sistema.
@@ -75,6 +83,9 @@ Principais Tabelas:
 1. Segurança: Implementar criptografia de senhas (hash) para usuários.
 2. Relatórios Avançados: Gráficos de desempenho por técnico e por período.
 3. Backup: Implementar botão para baixar cópia do banco de dados SQLite.
+1. (Opcional Futuro) Integração com API de WhatsApp para disparos automáticos.
+2. (Opcional Futuro) Cálculo de comissão automática para diferentes técnicos da equipe.
+3. (Opcional Futuro) Emissão de Recibos em formato de mini-impressora (Térmica 58mm/80mm).
 
 --- COMO ENVIAR ATUALIZAÇÕES PARA O GITHUB ---
 1. Abra o terminal na pasta do projeto.

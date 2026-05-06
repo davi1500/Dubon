@@ -5,8 +5,10 @@ $soma_venda = 0;
 $soma_lucro = 0;
 if ($total_servicos > 0) {
     foreach ($catalogo as $item) {
-        $soma_venda += $item['valor'];
-        $soma_lucro += ($item['valor'] - $item['custo']);
+        $v = is_numeric($item['valor']) ? (float)$item['valor'] : 0;
+        $c = is_numeric($item['custo']) ? (float)$item['custo'] : 0;
+        $soma_venda += $v;
+        $soma_lucro += ($v - $c);
     }
     $valor_medio = $soma_venda / $total_servicos;
     $lucro_medio = $soma_lucro / $total_servicos;
@@ -154,13 +156,15 @@ if ($total_servicos > 0) {
                                     <tr><td colspan="7" class="text-center text-muted py-4">Nenhum serviço cadastrado.</td></tr>
                                 <?php else: ?>
                                     <?php foreach($catalogo as $item): 
-                                        $lucro = $item['valor'] - $item['custo'];
+                                        $v = is_numeric($item['valor']) ? (float)$item['valor'] : 0;
+                                        $c = is_numeric($item['custo']) ? (float)$item['custo'] : 0;
+                                        $lucro = $v - $c;
                                     ?>
                                     <tr>
                                         <td class="text-center fs-5"><?php echo $item['icone_emoji']; ?></td>
                                         <td class="fw-bold text-secondary"><?php echo htmlspecialchars($item['nome']); ?></td>
-                                        <td class="text-danger">R$ <?php echo number_format($item['custo'], 2, ',', '.'); ?></td>
-                                        <td class="text-dark">R$ <?php echo number_format($item['valor'], 2, ',', '.'); ?></td>
+                                        <td class="text-danger">R$ <?php echo number_format($c, 2, ',', '.'); ?></td>
+                                        <td class="text-dark">R$ <?php echo number_format($v, 2, ',', '.'); ?></td>
                                         <td><?php echo ($item['garantia_dias'] ?? 0); ?> dias</td>
                                         <td class="text-success fw-bold">R$ <?php echo number_format($lucro, 2, ',', '.'); ?></td>
                                         <td class="text-end">
