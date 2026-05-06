@@ -1,6 +1,5 @@
 
 PROJETO: Sistema de Gestão - Dubom Refrigeração
-DATA DA ÚLTIMA ATUALIZAÇÃO: Junho 2026
 DATA DA ÚLTIMA ATUALIZAÇÃO: Atualizado recentemente (Dashboards, Backup, Preventivas)
 
 --- TECNOLOGIAS ---
@@ -80,9 +79,6 @@ Principais Tabelas:
 - catalogo (Preços padrão de serviços)
 
 --- PRÓXIMOS PASSOS (TODO LIST) ---
-1. Segurança: Implementar criptografia de senhas (hash) para usuários.
-2. Relatórios Avançados: Gráficos de desempenho por técnico e por período.
-3. Backup: Implementar botão para baixar cópia do banco de dados SQLite.
 1. (Opcional Futuro) Integração com API de WhatsApp para disparos automáticos.
 2. (Opcional Futuro) Cálculo de comissão automática para diferentes técnicos da equipe.
 3. (Opcional Futuro) Emissão de Recibos em formato de mini-impressora (Térmica 58mm/80mm).
