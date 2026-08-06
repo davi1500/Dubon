@@ -359,6 +359,7 @@ $podeEditar = $isAdmin || ($_SESSION['pode_editar_precos'] ?? 0);
         </div>
       </div>
     </div>
+    <?php endif; ?>
     </div> <!-- .card financeiro -->
     <?php endif; ?>
 
