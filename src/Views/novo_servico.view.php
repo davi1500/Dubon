@@ -2,6 +2,10 @@
 $is_edit = isset($servico);
 $page_title = $is_edit ? "Editar OS #{$servico['id']}" : "Nova Ordem de Serviço";
 $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BASE_URL . "/servicos/salvar";
+
+$isAdmin = (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin');
+$podeVer = $isAdmin || ($_SESSION['pode_ver_precos'] ?? 1);
+$podeEditar = $isAdmin || ($_SESSION['pode_editar_precos'] ?? 0);
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -111,10 +115,10 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
                                         <div class="col-4 col-md-1">
                                             <input type="number" name="item_qtd[]" class="form-control" placeholder="Qtd" value="<?php echo $item['quantidade'] ?? 1; ?>" min="1" oninput="recalculateAll()">
                                         </div>
-                                        <div class="col-6 col-md-2">
+                                        <div class="col-6 col-md-2 <?php echo !$podeVer ? 'd-none' : ''; ?>">
                                             <div class="input-group">
                                                 <span class="input-group-text">R$</span>
-                                                <input type="text" name="item_valor[]" class="form-control" placeholder="0,00" value="<?php echo number_format($item['valor'] ?? 0, 2, ',', '.'); ?>" oninput="recalculateAll()">
+                                                <input type="text" name="item_valor[]" class="form-control" placeholder="0,00" value="<?php echo number_format($item['valor'] ?? 0, 2, ',', '.'); ?>" oninput="recalculateAll()" <?php echo !$podeEditar ? 'readonly' : ''; ?>>
                                             </div>
                                         </div>
                                         <div class="col-2 col-md-1">
@@ -136,10 +140,10 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
                                         <input type="text" name="item_complemento[]" class="form-control" placeholder="Detalhes (Ex: Trocado a placa)">
                                     </div>
                                     <div class="col-4 col-md-1"><input type="number" name="item_qtd[]" class="form-control" placeholder="Qtd" value="1" min="1" oninput="recalculateAll()"></div>
-                                    <div class="col-6 col-md-2">
+                                    <div class="col-6 col-md-2 <?php echo !$podeVer ? 'd-none' : ''; ?>">
                                         <div class="input-group">
                                             <span class="input-group-text">R$</span>
-                                            <input type="text" name="item_valor[]" class="form-control" placeholder="0,00" oninput="recalculateAll()">
+                                            <input type="text" name="item_valor[]" class="form-control" placeholder="0,00" oninput="recalculateAll()" <?php echo !$podeEditar ? 'readonly' : ''; ?>>
                                         </div>
                                     </div>
                                     <div class="col-2 col-md-1"><button type="button" class="btn btn-outline-danger w-100" onclick="removerLinha(this)"><i class="bi bi-trash"></i></button></div>
@@ -170,10 +174,10 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
                                         <div class="col-4 col-md-2">
                                             <input type="number" name="produto_qtd[]" class="form-control" placeholder="Qtd" value="<?php echo $prod['quantidade']; ?>" min="1" oninput="recalculateAll()">
                                         </div>
-                                        <div class="col-6 col-md-3">
+                                        <div class="col-6 col-md-3 <?php echo !$podeVer ? 'd-none' : ''; ?>">
                                             <div class="input-group">
                                                 <span class="input-group-text">R$</span>
-                                                <input type="text" name="produto_valor[]" class="form-control prod-valor" value="<?php echo number_format($prod['preco_venda'], 2, ',', '.'); ?>" oninput="recalculateAll()">
+                                                <input type="text" name="produto_valor[]" class="form-control prod-valor" value="<?php echo number_format($prod['preco_venda'], 2, ',', '.'); ?>" oninput="recalculateAll()" <?php echo !$podeEditar ? 'readonly' : ''; ?>>
                                             </div>
                                         </div>
                                         <div class="col-2 col-md-1">
@@ -257,8 +261,8 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
 
 <script>
     // --- VARIÁVEIS DE PERMISSÃO ---
-    const podeVerPrecos = <?php echo ($_SESSION['pode_ver_precos'] ?? 1) ? 'true' : 'false'; ?>;
-    const podeEditarPrecos = <?php echo ($_SESSION['pode_editar_precos'] ?? 0) ? 'true' : 'false'; ?>;
+    const podeVerPrecos = <?php echo $podeVer ? 'true' : 'false'; ?>;
+    const podeEditarPrecos = <?php echo $podeEditar ? 'true' : 'false'; ?>;
 
     // --- VARIÁVEIS GLOBAIS ---
     const catalogo = <?php echo json_encode($catalogo); ?>;
