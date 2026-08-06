@@ -12,7 +12,7 @@ echo "<style>body { font-family: sans-serif; padding: 20px; background: #f4f4f4;
 echo "</head><body><div class='container'><h1>Atualização do Catálogo de Serviços</h1>";
 
 try {
-    require_once __DIR__ . '/conexao.php';
+    require_once __DIR__ . '/../conexao.php';
     
     // 1. Limpa a tabela catalogo atual
     $pdo->exec("DELETE FROM catalogo");
