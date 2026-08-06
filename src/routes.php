@@ -11,6 +11,7 @@ $router->get('servicos/editar/{id}', 'HomeController@edit');
 $router->post('servicos/atualizar/{id}', 'HomeController@update');
 $router->post('servicos/excluir/{id}', 'HomeController@delete');
 $router->post('servicos/garantia/{id}', 'HomeController@storeGarantia'); // Gera OS de garantia baseada na ID
+$router->post('servicos/status/{id}', 'HomeController@updateStatus'); // Muda o status direto pelo Kanban
 $router->post('servicos/pagar/{id}', 'PagamentoController@store');
 $router->post('servicos/pagamento/excluir/{id}', 'PagamentoController@delete');
 

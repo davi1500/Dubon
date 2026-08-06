@@ -26,7 +26,8 @@ class PagamentoController
                 self::recalcularValorPago($servico_id, $pdo);
             }
 
-            header('Location: ' . BASE_URL . '/servicos/visualizar/' . $servico_id);
+            $redirect = $_POST['redirect_to'] ?? ('/servicos/visualizar/' . $servico_id);
+            header('Location: ' . BASE_URL . $redirect);
             exit;
         }
     }

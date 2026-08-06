@@ -309,6 +309,10 @@ $dias_semana_map = [
                                         <?php echo htmlspecialchars($s['obs'] ?: 'Sem observações'); ?>
                                     </p>
                                     <div class="mt-2 pt-1 border-top d-flex justify-content-end align-items-center gap-1">
+                                        <?php if (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin'): ?>
+                                            <button type="button" class="btn btn-sm btn-outline-success py-0 px-1" title="Lançar Pagamento Rápido" onclick="abrirModalPagamento(<?php echo $s['id']; ?>, <?php echo max(0, $s['valor_total'] - $s['valor_pago']); ?>)"><i class="bi bi-currency-dollar"></i></button>
+                                            <button type="button" class="btn btn-sm btn-outline-warning py-0 px-1" title="Mudar Status" onclick="abrirModalStatus(<?php echo $s['id']; ?>, '<?php echo $s['status']; ?>')"><i class="bi bi-arrow-left-right"></i></button>
+                                        <?php endif; ?>
                                         <a href="<?php echo BASE_URL; ?>/servicos/editar/<?php echo $s['id']; ?>" class="btn btn-sm btn-outline-primary py-0 px-1" title="Editar Ordem de Serviço"><i class="bi bi-pencil"></i></a>
                                         <a href="<?php echo BASE_URL; ?>/gerar_os.php?id=<?php echo $s['id']; ?>" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Imprimir OS"><i class="bi bi-printer"></i></a>
                                         <?php if (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin'): ?>
@@ -433,6 +437,82 @@ $dias_semana_map = [
             });
         }
     });
+    });
 </script>
+
+<!-- Modais de Ação Rápida -->
+<div class="modal fade" id="modalPagamentoRapido" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <form id="formPagamentoRapido" method="POST" action="">
+      <input type="hidden" name="redirect_to" value="/">
+      <div class="modal-header bg-success text-white">
+        <h6 class="modal-title"><i class="bi bi-cash-coin"></i> Registrar Pagamento</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+            <label class="form-label small fw-bold">Data</label>
+            <input type="date" name="data_pagamento" class="form-control form-control-sm" value="<?php echo date('Y-m-d'); ?>" required>
+        </div>
+        <div class="mb-2">
+            <label class="form-label small fw-bold">Valor Recebido (R$)</label>
+            <input type="text" name="valor_pagamento" id="inputValorPagamentoRapido" class="form-control text-success fw-bold" required>
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="submit" class="btn btn-success btn-sm fw-bold w-100">Confirmar</button>
+      </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalStatusRapido" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <form id="formStatusRapido" method="POST" action="">
+      <div class="modal-header bg-warning">
+        <h6 class="modal-title"><i class="bi bi-arrow-left-right"></i> Mudar Status</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <select name="status" id="selectStatusRapido" class="form-select">
+            <option value="Agendado">Agendado</option>
+            <option value="Em Andamento">Em Andamento</option>
+            <option value="Concluido">Concluído</option>
+            <option value="Pago">Pago</option>
+        </select>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="submit" class="btn btn-warning btn-sm fw-bold w-100">Mudar</button>
+      </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/imask"></script>
+<script>
+    function abrirModalPagamento(id, saldo) {
+        document.getElementById('formPagamentoRapido').action = '<?php echo BASE_URL; ?>/servicos/pagar/' + id;
+        document.getElementById('inputValorPagamentoRapido').value = saldo.toFixed(2).replace('.', ',');
+        new bootstrap.Modal(document.getElementById('modalPagamentoRapido')).show();
+    }
+    
+    function abrirModalStatus(id, currentStatus) {
+        document.getElementById('formStatusRapido').action = '<?php echo BASE_URL; ?>/servicos/status/' + id;
+        document.getElementById('selectStatusRapido').value = currentStatus;
+        new bootstrap.Modal(document.getElementById('modalStatusRapido')).show();
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        const inputValor = document.getElementById('inputValorPagamentoRapido');
+        if(inputValor) {
+            IMask(inputValor, { mask: Number, scale: 2, signed: false, thousandsSeparator: '.', padFractionalZeros: true, normalizeZeros: true, radix: ',', mapToRadix: ['.'] });
+        }
+    });
+</script>
+
 </body>
 </html>
