@@ -2,6 +2,9 @@
 // Formata o nome do cliente para tirar espaços e acentos, ideal para nome de arquivo
 $nomeArquivo = preg_replace('/[^A-Za-z0-9\-]/', '_', trim($servico['cliente']));
 $page_title = "OS_" . str_pad($servico['id'], 4, '0', STR_PAD_LEFT) . "_" . $nomeArquivo;
+
+$isAdmin = (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin');
+$podeGerenciarFinanceiro = $isAdmin || ($_SESSION['pode_editar_precos'] ?? 0);
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -42,6 +45,9 @@ $page_title = "OS_" . str_pad($servico['id'], 4, '0', STR_PAD_LEFT) . "_" . $nom
     <div>
         <?php if(empty($servico['servico_pai_id'])): // Só mostra opção de garantia se essa já não for uma garantia ?>
             <button onclick="confirmarGarantia()" class="btn btn-warning me-2"><i class="bi bi-arrow-repeat"></i> Acionar Garantia</button>
+        <?php endif; ?>
+        <?php if ($podeGerenciarFinanceiro): ?>
+            <button type="button" class="btn btn-success me-2 fw-bold" data-bs-toggle="modal" data-bs-target="#modalPagamento"><i class="bi bi-cash-coin"></i> Lançar Pagamento</button>
         <?php endif; ?>
         <a href="<?php echo BASE_URL; ?>/servicos/editar/<?php echo $servico['id']; ?>" class="btn btn-outline-primary me-2"><i class="bi bi-pencil"></i> Editar</a>
         <button onclick="window.print()" class="btn btn-secondary me-2"><i class="bi bi-printer"></i> Imprimir</button>
@@ -193,9 +199,111 @@ $page_title = "OS_" . str_pad($servico['id'], 4, '0', STR_PAD_LEFT) . "_" . $nom
     <div class="mt-5 pt-5 text-center text-muted" style="font-size: 0.8rem;">
         <p>_______________________________________________________<br>Assinatura do Cliente</p>
     </div>
-</div>
 
+    <!-- Histórico de Pagamentos -->
+    <?php if(!empty($servico['pagamentos']) || $podeGerenciarFinanceiro): ?>
+    <h5 class="fw-bold mt-5 mb-3 border-bottom pb-2 no-print">Extrato Financeiro</h5>
+    <div class="row mb-4 no-print">
+        <div class="col-md-6">
+            <table class="table table-sm table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>Data</th>
+                        <th class="text-end">Valor Recebido</th>
+                        <?php if($podeGerenciarFinanceiro): ?><th width="40"></th><?php endif; ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php 
+                    $total_recebido = 0;
+                    foreach($servico['pagamentos'] as $pag): 
+                        $total_recebido += $pag['valor'];
+                    ?>
+                    <tr>
+                        <td><?php echo date('d/m/Y', strtotime($pag['data_pagamento'])); ?></td>
+                        <td class="text-end text-success fw-bold">R$ <?php echo number_format($pag['valor'], 2, ',', '.'); ?></td>
+                        <?php if($podeGerenciarFinanceiro): ?>
+                        <td class="text-center">
+                            <form action="<?php echo BASE_URL; ?>/servicos/pagamento/excluir/<?php echo $pag['id']; ?>" method="POST" onsubmit="return confirm('Excluir este pagamento?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger border-0"><i class="bi bi-x"></i></button>
+                            </form>
+                        </td>
+                        <?php endif; ?>
+                    </tr>
+                    <?php endforeach; ?>
+                    <?php if(empty($servico['pagamentos'])): ?>
+                    <tr><td colspan="3" class="text-center text-muted">Nenhum pagamento registrado.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-6 text-end">
+            <?php 
+            $saldo_devedor = max(0, $servico['valor_total'] - $total_recebido); 
+            ?>
+            <h5 class="text-muted">Total da OS: R$ <?php echo number_format($servico['valor_total'], 2, ',', '.'); ?></h5>
+            <h5 class="text-success">Já Pago: R$ <?php echo number_format($total_recebido, 2, ',', '.'); ?></h5>
+            <?php if($saldo_devedor > 0): ?>
+                <h4 class="text-danger fw-bold mt-2">Saldo Devedor: R$ <?php echo number_format($saldo_devedor, 2, ',', '.'); ?></h4>
+            <?php else: ?>
+                <h4 class="text-success fw-bold mt-2"><i class="bi bi-check-circle-fill"></i> Totalmente Pago</h4>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
+</div> <!-- .os-container -->
+
+<?php if ($podeGerenciarFinanceiro): ?>
+<!-- Modal Lançar Pagamento -->
+<div class="modal fade" id="modalPagamento" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form action="<?php echo BASE_URL; ?>/servicos/pagar/<?php echo $servico['id']; ?>" method="POST">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title"><i class="bi bi-cash-coin"></i> Registrar Pagamento</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+            <label class="form-label fw-bold">Data do Pagamento</label>
+            <input type="date" name="data_pagamento" class="form-control" value="<?php echo date('Y-m-d'); ?>" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label fw-bold">Valor Recebido (R$)</label>
+            <input type="text" name="valor_pagamento" class="form-control form-control-lg text-success fw-bold" 
+                   value="<?php echo number_format(max(0, $servico['valor_total'] - ($servico['valor_pago'] ?? 0)), 2, ',', '.'); ?>" required>
+        </div>
+      </div>
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success fw-bold">Confirmar Pagamento</button>
+      </div>
+      </form>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
+<!-- Máscara JS para o modal -->
+<script src="https://unpkg.com/imask"></script>
 <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const inputValor = document.querySelector('input[name="valor_pagamento"]');
+        if(inputValor) {
+            IMask(inputValor, {
+                mask: Number,
+                scale: 2,
+                signed: false,
+                thousandsSeparator: '.',
+                padFractionalZeros: true,
+                normalizeZeros: true,
+                radix: ',',
+                mapToRadix: ['.']
+            });
+        }
+    });
+
 function enviarWhatsApp() {
     // Dados para a mensagem
     let telefone = "<?php echo preg_replace('/[^0-9]/', '', $servico['cliente_telefone'] ?? ''); ?>";

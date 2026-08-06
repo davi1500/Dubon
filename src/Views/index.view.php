@@ -275,8 +275,8 @@ $dias_semana_map = [
                                             <div class="text-end">
                                                 <small class="fw-bold text-success">R$ <?php echo number_format($s['valor_total'], 2, ',', '.'); ?></small>
                                                 <?php if($s['valor_pago'] > 0 && $s['valor_pago'] < $s['valor_total'] && $s['status'] !== 'Pago'): ?>
-                                                    <br><span class="badge bg-success-subtle text-success-emphasis border border-success-subtle" style="font-size: 0.65rem;" title="Valor já adiantado">
-                                                        Pago: R$ <?php echo number_format($s['valor_pago'], 2, ',', '.'); ?>
+                                                    <br><span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle mt-1" style="font-size: 0.70rem;" title="Valor parcial recebido">
+                                                        Falta R$ <?php echo number_format($s['valor_total'] - $s['valor_pago'], 2, ',', '.'); ?>
                                                     </span>
                                                 <?php endif; ?>
                                             </div>
