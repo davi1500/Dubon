@@ -252,6 +252,11 @@ $uri = $_SERVER['REQUEST_URI'];
             </a>
         </li>
         <li class="nav-item">
+            <a class="nav-link <?php echo str_starts_with($uri, '/contratos') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/contratos">
+                <i class="bi bi-file-earmark-check"></i> Contratos (PMOC)
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link <?php echo str_starts_with($uri, '/produtos') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/produtos">
                 <i class="bi bi-box-seam"></i> Produtos
             </a>

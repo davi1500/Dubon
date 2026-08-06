@@ -18,8 +18,20 @@ try {
         usuario TEXT NOT NULL UNIQUE,
         senha TEXT NOT NULL,
         nivel TEXT NOT NULL,
-        nome TEXT NOT NULL
+        nome TEXT NOT NULL,
+        pode_ver_precos INTEGER DEFAULT 1,
+        pode_editar_precos INTEGER DEFAULT 0
     )");
+
+    // Atualização de Schema para Usuários (Novos Campos de Permissão)
+    $cols_usuarios = ['pode_ver_precos' => 'INTEGER DEFAULT 1', 'pode_editar_precos' => 'INTEGER DEFAULT 0'];
+    foreach ($cols_usuarios as $col => $type) {
+        try {
+            $pdo->exec("ALTER TABLE usuarios ADD COLUMN $col $type");
+        } catch (Exception $e) {
+            // Coluna já existe, ignora o erro
+        }
+    }
 
     // 2. Tabela de Serviços (Cabeçalho)
     $pdo->exec("CREATE TABLE IF NOT EXISTS servicos (
@@ -198,6 +210,19 @@ try {
                 SELECT id, valor_pago, 'Dinheiro/Migração', COALESCE(data_servico, CURRENT_TIMESTAMP)
                 FROM servicos 
                 WHERE valor_pago > 0 AND id NOT IN (SELECT servico_id FROM pagamentos)");
+
+    // 15. Tabela de Contratos (PMOC / Recorrentes)
+    $pdo->exec("CREATE TABLE IF NOT EXISTS contratos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cliente_id INTEGER NOT NULL,
+        valor_mensal DECIMAL(10,2) NOT NULL,
+        dia_vencimento INTEGER NOT NULL,
+        maquinas_cobertas TEXT,
+        ativo INTEGER DEFAULT 1,
+        ultimo_mes_gerado TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (cliente_id) REFERENCES clientes(id)
+    )");
 
     echo "<p class='log success'>✔ Tabelas criadas/verificadas com sucesso.</p>";
 

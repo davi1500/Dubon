@@ -99,11 +99,24 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Nível de Acesso</label>
-                        <select name="nivel" id="userNivel" class="form-select">
+                        <select name="nivel" id="userNivel" class="form-select" onchange="togglePermissoes(this.value)">
                             <option value="funcionario">Funcionário (Acesso Básico)</option>
                             <option value="admin">Administrador (Acesso Total)</option>
                         </select>
                     </div>
+                    
+                    <div class="mb-4" id="divPermissoes">
+                        <label class="form-label fw-bold">Permissões Especiais (Apenas para Funcionários)</label>
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" role="switch" name="pode_ver_precos" id="userVerPrecos" value="1" checked>
+                            <label class="form-check-label" for="userVerPrecos">Pode visualizar preços nas OSs</label>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" name="pode_editar_precos" id="userEditarPrecos" value="1">
+                            <label class="form-check-label" for="userEditarPrecos">Pode editar preços (Descontos/Orçamentos)</label>
+                        </div>
+                    </div>
+
                     <div class="text-end">
                         <button type="submit" class="btn btn-primary rounded-3 px-4">Salvar</button>
                     </div>
@@ -116,8 +129,35 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     const modal = new bootstrap.Modal(document.getElementById('modalUsuario'));
-    function abrirModal() { document.getElementById('formUsuario').reset(); document.getElementById('userId').value = ''; modal.show(); }
-    function editar(u) { document.getElementById('userId').value = u.id; document.getElementById('userNome').value = u.nome; document.getElementById('userLogin').value = u.usuario; document.getElementById('userNivel').value = u.nivel; modal.show(); }
+    
+    function togglePermissoes(nivel) {
+        const div = document.getElementById('divPermissoes');
+        if (nivel === 'admin') {
+            div.style.display = 'none';
+        } else {
+            div.style.display = 'block';
+        }
+    }
+
+    function abrirModal() { 
+        document.getElementById('formUsuario').reset(); 
+        document.getElementById('userId').value = ''; 
+        document.getElementById('userVerPrecos').checked = true;
+        document.getElementById('userEditarPrecos').checked = false;
+        togglePermissoes('funcionario');
+        modal.show(); 
+    }
+    
+    function editar(u) { 
+        document.getElementById('userId').value = u.id; 
+        document.getElementById('userNome').value = u.nome; 
+        document.getElementById('userLogin').value = u.usuario; 
+        document.getElementById('userNivel').value = u.nivel; 
+        document.getElementById('userVerPrecos').checked = (u.pode_ver_precos == 1);
+        document.getElementById('userEditarPrecos').checked = (u.pode_editar_precos == 1);
+        togglePermissoes(u.nivel);
+        modal.show(); 
+    }
 </script>
 </body>
 </html>

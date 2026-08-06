@@ -45,6 +45,11 @@ $router->post('catalogo/salvar', 'CatalogoController@store');
 $router->post('catalogo/excluir/{id}', 'CatalogoController@delete');
 
 // --- Financeiro / Despesas ---
+$router->get('contratos', 'ContratoController@index');
+$router->post('contratos/salvar', 'ContratoController@store');
+$router->post('contratos/excluir/{id}', 'ContratoController@delete');
+
+// --- Financeiro / Despesas ---
 $router->get('despesas', 'DespesaController@index');
 $router->post('despesas/salvar', 'DespesaController@store');
 $router->post('despesas/excluir/{id}', 'DespesaController@delete');

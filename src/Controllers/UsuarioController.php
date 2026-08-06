@@ -24,6 +24,14 @@ class UsuarioController
             $usuario = $_POST['usuario'] ?? '';
             $senha = $_POST['senha'] ?? '';
             $nivel = $_POST['nivel'] ?? 'funcionario';
+            
+            $pode_ver_precos = isset($_POST['pode_ver_precos']) ? 1 : 0;
+            $pode_editar_precos = isset($_POST['pode_editar_precos']) ? 1 : 0;
+
+            if ($nivel === 'admin') {
+                $pode_ver_precos = 1;
+                $pode_editar_precos = 1;
+            }
 
             if (empty($nome) || empty($usuario)) {
                 die('Nome e Usuário são obrigatórios.');
@@ -34,18 +42,18 @@ class UsuarioController
                 if (!empty($senha)) {
                     // Se digitou senha nova, criptografa antes de salvar
                     $hash = password_hash($senha, PASSWORD_DEFAULT);
-                    $stmt = $pdo->prepare("UPDATE usuarios SET nome=?, usuario=?, senha=?, nivel=? WHERE id=?");
-                    $stmt->execute([$nome, $usuario, $hash, $nivel, $id]);
+                    $stmt = $pdo->prepare("UPDATE usuarios SET nome=?, usuario=?, senha=?, nivel=?, pode_ver_precos=?, pode_editar_precos=? WHERE id=?");
+                    $stmt->execute([$nome, $usuario, $hash, $nivel, $pode_ver_precos, $pode_editar_precos, $id]);
                 } else {
                     // Mantém senha antiga
-                    $stmt = $pdo->prepare("UPDATE usuarios SET nome=?, usuario=?, nivel=? WHERE id=?");
-                    $stmt->execute([$nome, $usuario, $nivel, $id]);
+                    $stmt = $pdo->prepare("UPDATE usuarios SET nome=?, usuario=?, nivel=?, pode_ver_precos=?, pode_editar_precos=? WHERE id=?");
+                    $stmt->execute([$nome, $usuario, $nivel, $pode_ver_precos, $pode_editar_precos, $id]);
                 }
             } else {
                 // Criar Novo
                 $hash = password_hash($senha, PASSWORD_DEFAULT);
-                $stmt = $pdo->prepare("INSERT INTO usuarios (nome, usuario, senha, nivel) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$nome, $usuario, $hash, $nivel]);
+                $stmt = $pdo->prepare("INSERT INTO usuarios (nome, usuario, senha, nivel, pode_ver_precos, pode_editar_precos) VALUES (?, ?, ?, ?, ?, ?)");
+                $stmt->execute([$nome, $usuario, $hash, $nivel, $pode_ver_precos, $pode_editar_precos]);
             }
             header('Location: ' . BASE_URL . '/usuarios');
             exit;

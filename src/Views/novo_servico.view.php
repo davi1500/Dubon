@@ -198,20 +198,19 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
                 <label class="form-label fw-bold"><?php echo $is_edit ? 'Status da OS' : 'Status Inicial'; ?></label>
                 <?php $status_atual = $is_edit ? ($servico['status'] ?? 'Agendado') : 'Agendado'; ?>
                 <select name="status" id="statusSelect" class="form-select fw-bold border-0 bg-info bg-opacity-10 text-info" onchange="atualizarCorStatus(this)">
-                    <option value="Agendado" class="text-dark" <?php echo ($is_edit && $servico['status'] == 'Agendado') ? 'selected' : ''; ?>>📅 Agendado</option>
-                    <option value="Em Andamento" class="text-dark" <?php echo (!$is_edit || ($is_edit && $servico['status'] == 'Em Andamento')) ? 'selected' : ''; ?>>🔧 Em Andamento</option>
-                    <option value="Concluido" class="text-dark" <?php echo ($is_edit && $servico['status'] == 'Concluido') ? 'selected' : ''; ?>>⚠️ Concluído (Aguardando Pagamento)</option>
-                    <option value="Pago" class="text-dark" <?php echo ($is_edit && $servico['status'] == 'Pago') ? 'selected' : ''; ?>>💲 Pago</option>
                     <option value="Agendado" class="text-dark" <?php echo ($status_atual === 'Agendado') ? 'selected' : ''; ?>>📅 Agendado</option>
                     <option value="Em Andamento" class="text-dark" <?php echo ($status_atual === 'Em Andamento') ? 'selected' : ''; ?>>🔧 Em Andamento</option>
                     <option value="Concluido" class="text-dark" <?php echo ($status_atual === 'Concluido' || $status_atual === 'Concluído') ? 'selected' : ''; ?>>⚠️ Concluído (Aguardando Pagamento)</option>
+                    <?php if ($_SESSION['usuario_nivel'] === 'admin' || ($_SESSION['pode_editar_precos'] ?? 0)): ?>
                     <option value="Pago" class="text-dark" <?php echo ($status_atual === 'Pago') ? 'selected' : ''; ?>>💲 Pago</option>
+                    <?php endif; ?>
                 </select>
             </div>
             <div class="col-md-4">
                 <label class="form-label fw-bold">Garantia (Dias)</label>
                 <input type="number" name="garantia" class="form-control bg-light border-0" value="<?php echo $is_edit ? ($servico['garantia'] ?? 90) : '90'; ?>">
             </div>
+            <?php if ($_SESSION['pode_ver_precos'] ?? 1): ?>
             <div class="col-md-4">
                 <div class="card bg-light border-0 p-3">
                     <div class="d-flex justify-content-between mb-2">
@@ -222,18 +221,22 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
                         <span>Desconto:</span>
                         <div class="input-group input-group-sm" style="width: 120px;">
                             <span class="input-group-text">R$</span>
-                            <input type="text" name="desconto" id="inputDesconto" class="form-control text-end" value="<?php echo number_format($servico['desconto'] ?? 0, 2, ',', '.'); ?>" oninput="recalculateAll()">
+                            <input type="text" name="desconto" id="inputDesconto" class="form-control text-end" value="<?php echo number_format($servico['desconto'] ?? 0, 2, ',', '.'); ?>" oninput="recalculateAll()" <?php echo (!($_SESSION['pode_editar_precos'] ?? 0)) ? 'readonly tabindex="-1"' : ''; ?>>
                         </div>
                     </div>
                     <div class="d-flex justify-content-between align-items-center border-top pt-2">
                         <span class="fw-bold fs-5">Valor Final:</span>
                         <div class="input-group" style="width: 140px;">
                             <span class="input-group-text bg-primary text-white border-primary">R$</span>
-                            <input type="text" id="inputTotalFinal" class="form-control fw-bold text-primary text-end" value="<?php echo number_format($servico['valor_total'] ?? 0, 2, ',', '.'); ?>" oninput="recalculateDiscountFromTotal()">
+                            <input type="text" id="inputTotalFinal" name="valor_final_dummy" class="form-control fw-bold text-primary text-end" value="<?php echo number_format($servico['valor_total'] ?? 0, 2, ',', '.'); ?>" oninput="recalculateDiscountFromTotal()" <?php echo (!($_SESSION['pode_editar_precos'] ?? 0)) ? 'readonly tabindex="-1"' : ''; ?>>
                         </div>
                     </div>
                 </div>
             </div>
+            <?php else: ?>
+                <!-- Input hidden para submissão do formulário caso o técnico não possa ver preços -->
+                <input type="hidden" name="desconto" value="<?php echo $servico['desconto'] ?? 0; ?>">
+            <?php endif; ?>
 
             <div class="col-12">
                 <label class="form-label fw-bold">Laudo Técnico (Visível para o cliente)</label>
@@ -253,6 +256,11 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
 </div>
 
 <script>
+    // --- VARIÁVEIS DE PERMISSÃO ---
+    const podeVerPrecos = <?php echo ($_SESSION['pode_ver_precos'] ?? 1) ? 'true' : 'false'; ?>;
+    const podeEditarPrecos = <?php echo ($_SESSION['pode_editar_precos'] ?? 0) ? 'true' : 'false'; ?>;
+
+    // --- VARIÁVEIS GLOBAIS ---
     const catalogo = <?php echo json_encode($catalogo); ?>;
     const todosClientes = <?php echo json_encode($clientes); ?>;
     const listaProdutos = <?php echo json_encode($produtos); ?>;
@@ -374,7 +382,7 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
                 <input type="text" name="item_complemento[]" class="form-control" placeholder="Detalhes (Ex: Trocado a placa)">
             </div>
             <div class="col-4 col-md-1"><input type="number" name="item_qtd[]" class="form-control" value="1" min="1" oninput="recalculateAll()"></div>
-            <div class="col-6 col-md-2"><div class="input-group"><span class="input-group-text">R$</span><input type="text" name="item_valor[]" class="form-control" placeholder="0,00" oninput="recalculateAll()"></div></div>
+            <div class="col-6 col-md-2 ${!podeVerPrecos ? 'd-none' : ''}"><div class="input-group"><span class="input-group-text">R$</span><input type="text" name="item_valor[]" class="form-control" placeholder="0,00" oninput="recalculateAll()" ${!podeEditarPrecos ? 'readonly' : ''}></div></div>
             <div class="col-2 col-md-1"><button type="button" class="btn btn-outline-danger w-100" onclick="removerLinha(this)"><i class="bi bi-trash"></i></button></div>
         `;
         document.getElementById('listaItens').appendChild(div);
@@ -396,10 +404,10 @@ $form_action = $is_edit ? BASE_URL . "/servicos/atualizar/{$servico['id']}" : BA
                 </select>
             </div>
             <div class="col-4 col-md-2"><input type="number" name="produto_qtd[]" class="form-control" value="1" min="1" oninput="recalculateAll()"></div>
-            <div class="col-6 col-md-3">
+            <div class="col-6 col-md-3 ${!podeVerPrecos ? 'd-none' : ''}">
                 <div class="input-group">
                     <span class="input-group-text">R$</span>
-                    <input type="text" name="produto_valor[]" class="form-control prod-valor" placeholder="0,00" oninput="recalculateAll()">
+                    <input type="text" name="produto_valor[]" class="form-control prod-valor" placeholder="0,00" oninput="recalculateAll()" ${!podeEditarPrecos ? 'readonly' : ''}>
                 </div>
             </div>
             <div class="col-2 col-md-1"><button type="button" class="btn btn-outline-danger w-100" onclick="removerLinhaProd(this)"><i class="bi bi-trash"></i></button></div>

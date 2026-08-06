@@ -7,6 +7,12 @@ class HomeController
         // A variável $pdo está disponível globalmente pelo bootstrap.php
         global $pdo;
 
+        // Automação PMOC: Verifica se há contratos para gerar (Apenas se Admin)
+        if (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin') {
+            require_once __DIR__ . '/ContratoController.php';
+            ContratoController::checkPMOC($pdo);
+        }
+
         // 1. Busca os serviços
         // Busca os serviços no banco (lógica que estava no index.php antigo)
         $stmt = $pdo->query("
@@ -194,8 +200,19 @@ class HomeController
                 $obs = $_POST['laudo_tecnico'] ?? ''; // Observações Internas (Não aparece na OS)
                 $laudo_tecnico = $_POST['obs'] ?? ''; // Laudo Técnico (Visível para o cliente)
                 $garantia = $_POST['garantia'] ?? 90;
+                
+                $pode_editar = $_SESSION['pode_editar_precos'] ?? 0;
+                // Se é admin, sempre pode editar
+                if (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin') {
+                    $pode_editar = 1;
+                }
+
                 // Converte o valor de moeda BRL para um float válido
-                $desconto = floatval(str_replace(',', '.', str_replace('.', '', $_POST['desconto'] ?? '0')));
+                if ($pode_editar) {
+                    $desconto = floatval(str_replace(',', '.', str_replace('.', '', $_POST['desconto'] ?? '0')));
+                } else {
+                    $desconto = 0;
+                }
                 
                 // Arrays dos itens (descrição, valor, quantidade)
                 $itens_desc = $_POST['item_descricao'] ?? [];
@@ -251,6 +268,19 @@ class HomeController
                     if (!empty($itens_desc[$i])) {
                         $comp = $itens_comp[$i] ?? '';
                         $vlr = floatval(str_replace(',', '.', str_replace('.', '', $itens_valor[$i])));
+                        
+                        if (!$pode_editar) {
+                            // Busca o preço oficial no catálogo
+                            $stmtCat = $pdo->prepare("SELECT preco_padrao FROM catalogo WHERE nome = ? LIMIT 1");
+                            $stmtCat->execute([trim($itens_desc[$i])]);
+                            $oficial = $stmtCat->fetchColumn();
+                            if ($oficial !== false) {
+                                $vlr = $oficial;
+                            } else {
+                                $vlr = 0; // Vai para orçamento
+                            }
+                        }
+
                         $qtd = $itens_qtd[$i] < 1 ? 1 : $itens_qtd[$i];
                         $stmtItem->execute([$servico_id, $itens_desc[$i], $comp, $vlr, $qtd]);
                         $valor_total_servico += ($vlr * $qtd);
@@ -264,8 +294,8 @@ class HomeController
 
                 for ($i = 0; $i < count($prods_id); $i++) {
                     if (!empty($prods_id[$i])) {
-                        // Prioriza o valor enviado pelo formulário (editável), senão busca do banco
-                        if (isset($prods_valor[$i]) && $prods_valor[$i] !== '') {
+                        // Prioriza o valor enviado pelo formulário apenas se tiver permissão
+                        if (isset($prods_valor[$i]) && $prods_valor[$i] !== '' && $pode_editar) {
                             $preco = floatval(str_replace(',', '.', str_replace('.', '', $prods_valor[$i])));
                         } else {
                             $stmtGetPreco->execute([$prods_id[$i]]);

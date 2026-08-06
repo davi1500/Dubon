@@ -82,6 +82,10 @@ Principais Tabelas:
 - usuarios (Login)
 - catalogo (Preços padrão de serviços)
 
+--- ATUALIZAÇÕES RECENTES ---
+- Nomenclatura Padronizada de Serviços: O catálogo foi totalmente reestruturado, agrupando serviços por faixas de capacidade (Até 12k, 18k-24k) e segmentando por áreas (Splits, Lavadoras, Câmaras Frias, Geladeiras). Fim dos nomes genéricos como "instalação A".
+- Arquitetura (Deploy): Scripts avulsos como `atualizar_catalogo.php` devem residir na pasta `public/` para evitar o bloqueio de rotas pelo Front Controller (Erro 404).
+
 --- PRÓXIMOS PASSOS (TODO LIST) ---
 1. (Opcional Futuro) Integração com API de WhatsApp para disparos automáticos.
 2. (Opcional Futuro) Cálculo de comissão automática para diferentes técnicos da equipe.

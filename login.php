@@ -41,6 +41,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['usuario_nome'] = $u['nome'];
             $_SESSION['usuario_nivel'] = $u['nivel'];
             
+            // Permissões Dinâmicas
+            // Se for admin, garante acesso total, senão pega do banco
+            $_SESSION['pode_ver_precos'] = ($u['nivel'] === 'admin') ? 1 : ($u['pode_ver_precos'] ?? 1);
+            $_SESSION['pode_editar_precos'] = ($u['nivel'] === 'admin') ? 1 : ($u['pode_editar_precos'] ?? 0);
+            
             header('Location: ' . BASE_URL . '/');
             exit;
     } else {
