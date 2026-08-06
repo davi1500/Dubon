@@ -27,6 +27,10 @@ DATA DA ÚLTIMA ATUALIZAÇÃO: Atualizado recentemente (Dashboards, Backup, Prev
 4. setup_produtos.php: Script para popular estoque inicial com peças e preços médios.
 5. setup_materiais.php: Script para popular lista de insumos de consumo.
 
+--- PASTAS TEMPORÁRIAS / ISOLADAS ---
+- Pasta "precel/": Trata-se de uma página de Pre-Sell (landing page) para captura/redirecionamento de leads para IPTV.
+  NÃO faz parte do sistema Dubom Refrigeração. Está aqui temporariamente e em breve será migrada para um domínio próprio.
+
 --- REGRAS DE NEGÓCIO IMPLEMENTADAS ---
 
 1. NÍVEIS DE ACESSO (RBAC):
