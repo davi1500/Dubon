@@ -10,7 +10,11 @@ class HomeController
         // Automação PMOC: Verifica se há contratos para gerar (Apenas se Admin)
         if (isset($_SESSION['usuario_nivel']) && $_SESSION['usuario_nivel'] === 'admin') {
             require_once __DIR__ . '/ContratoController.php';
-            ContratoController::checkPMOC($pdo);
+            try {
+                ContratoController::checkPMOC($pdo);
+            } catch (Exception $e) {
+                // Ignora o erro silenciosamente caso a tabela ainda não exista
+            }
         }
 
         // 1. Busca os serviços
