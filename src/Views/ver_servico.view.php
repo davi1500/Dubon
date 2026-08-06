@@ -1,5 +1,7 @@
 <?php
-$page_title = "Ordem de Serviço #" . $servico['id'];
+// Formata o nome do cliente para tirar espaços e acentos, ideal para nome de arquivo
+$nomeArquivo = preg_replace('/[^A-Za-z0-9\-]/', '_', trim($servico['cliente']));
+$page_title = "OS_" . str_pad($servico['id'], 4, '0', STR_PAD_LEFT) . "_" . $nomeArquivo;
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
