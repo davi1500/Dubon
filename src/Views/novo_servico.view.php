@@ -257,8 +257,111 @@ $podeEditar = $isAdmin || ($_SESSION['pode_editar_precos'] ?? 0);
             </div>
         </div>
     </form>
+    
+    <?php if ($is_edit && (!empty($servico['pagamentos']) || $podeEditar)): ?>
+    <hr class="my-5">
+    <div class="row align-items-center mb-3">
+        <div class="col-8">
+            <h5 class="fw-bold mb-0">Extrato Financeiro</h5>
+        </div>
+        <div class="col-4 text-end">
+            <?php if ($podeEditar): ?>
+                <button type="button" class="btn btn-success btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalPagamento"><i class="bi bi-cash-coin"></i> Lançar Pagamento</button>
+            <?php endif; ?>
+        </div>
+    </div>
+    
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <table class="table table-sm table-bordered bg-white shadow-sm">
+                <thead class="table-light">
+                    <tr>
+                        <th>Data</th>
+                        <th class="text-end">Valor Recebido</th>
+                        <?php if($podeEditar): ?><th width="40"></th><?php endif; ?>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php 
+                    $total_recebido = 0;
+                    if (!empty($servico['pagamentos'])):
+                        foreach($servico['pagamentos'] as $pag): 
+                            $total_recebido += $pag['valor'];
+                        ?>
+                        <tr>
+                            <td><?php echo date('d/m/Y', strtotime($pag['data_pagamento'])); ?></td>
+                            <td class="text-end text-success fw-bold">R$ <?php echo number_format($pag['valor'], 2, ',', '.'); ?></td>
+                            <?php if($podeEditar): ?>
+                            <td class="text-center">
+                                <a href="javascript:void(0)" onclick="if(confirm('Excluir este pagamento?')) { document.getElementById('formDeletePag-<?php echo $pag['id']; ?>').submit(); }" class="btn btn-sm btn-outline-danger border-0"><i class="bi bi-x"></i></a>
+                            </td>
+                            <?php endif; ?>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr><td colspan="3" class="text-center text-muted">Nenhum pagamento registrado.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <div class="col-md-6 text-end">
+            <?php 
+            $saldo_devedor = max(0, ($servico['valor_total'] ?? 0) - $total_recebido); 
+            ?>
+            <h5 class="text-muted">Total da OS: R$ <span><?php echo number_format($servico['valor_total'] ?? 0, 2, ',', '.'); ?></span></h5>
+            <h5 class="text-success">Já Pago: R$ <?php echo number_format($total_recebido, 2, ',', '.'); ?></h5>
+            <?php if($saldo_devedor > 0): ?>
+                <h4 class="text-danger fw-bold mt-2">Saldo Devedor: R$ <?php echo number_format($saldo_devedor, 2, ',', '.'); ?></h4>
+            <?php else: ?>
+                <h4 class="text-success fw-bold mt-2"><i class="bi bi-check-circle-fill"></i> Totalmente Pago</h4>
+            <?php endif; ?>
+        </div>
+    </div>
+    
+    <!-- Formulários ocultos para exclusão -->
+    <?php if ($podeEditar && !empty($servico['pagamentos'])): ?>
+        <?php foreach($servico['pagamentos'] as $pag): ?>
+            <form id="formDeletePag-<?php echo $pag['id']; ?>" action="<?php echo BASE_URL; ?>/servicos/pagamento/excluir/<?php echo $pag['id']; ?>" method="POST" style="display:none;">
+                <input type="hidden" name="redirect_to" value="/servicos/editar/<?php echo $servico['id']; ?>">
+            </form>
+        <?php endforeach; ?>
+    <?php endif; ?>
+    
+    <!-- Modal Lançar Pagamento -->
+    <?php if ($podeEditar): ?>
+    <div class="modal fade" id="modalPagamento" tabindex="-1">
+      <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+          <form action="<?php echo BASE_URL; ?>/servicos/pagar/<?php echo $servico['id']; ?>" method="POST">
+          <input type="hidden" name="redirect_to" value="/servicos/editar/<?php echo $servico['id']; ?>">
+          <div class="modal-header bg-success text-white">
+            <h6 class="modal-title"><i class="bi bi-cash-coin"></i> Registrar Pagamento</h6>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-2">
+                <label class="form-label small fw-bold">Data do Pagamento</label>
+                <input type="date" name="data_pagamento" class="form-control form-control-sm" value="<?php echo date('Y-m-d'); ?>" required>
+            </div>
+            <div class="mb-2">
+                <label class="form-label small fw-bold">Valor Recebido (R$)</label>
+                <input type="text" name="valor_pagamento" class="form-control text-success fw-bold" id="inputModalValor"
+                       value="<?php echo number_format($saldo_devedor, 2, ',', '.'); ?>" required>
+            </div>
+          </div>
+          <div class="modal-footer border-0">
+            <button type="submit" class="btn btn-success btn-sm fw-bold w-100">Confirmar Pagamento</button>
+          </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <?php endif; ?>
+    <?php endif; ?>
+
 </div>
 
+<script src="https://unpkg.com/imask"></script>
 <script>
     // --- VARIÁVEIS DE PERMISSÃO ---
     const podeVerPrecos = <?php echo $podeVer ? 'true' : 'false'; ?>;
@@ -745,9 +848,20 @@ $podeEditar = $isAdmin || ($_SESSION['pode_editar_precos'] ?? 0);
 
     // Feedback visual ao salvar
     document.querySelector('form').addEventListener('submit', function(e) {
+        if(e.target.id && (e.target.id.startsWith('formDeletePag') || e.target.id === 'modalPagamento' || e.target.closest('#modalPagamento'))) return; // Ignora form de pagamento
+        
         const btn = this.querySelector('button[type="submit"]');
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Salvando...';
+        if(btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Salvando...';
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const inputModalValor = document.getElementById('inputModalValor');
+        if(inputModalValor) {
+            IMask(inputModalValor, { mask: Number, scale: 2, signed: false, thousandsSeparator: '.', padFractionalZeros: true, normalizeZeros: true, radix: ',', mapToRadix: ['.'] });
+        }
     });
 </script>
 
