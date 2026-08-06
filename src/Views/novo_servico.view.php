@@ -259,17 +259,20 @@ $podeEditar = $isAdmin || ($_SESSION['pode_editar_precos'] ?? 0);
     </form>
     
     <?php if ($is_edit && (!empty($servico['pagamentos']) || $podeEditar)): ?>
-    <hr class="my-5">
-    <div class="row align-items-center mb-3">
-        <div class="col-8">
-            <h5 class="fw-bold mb-0">Extrato Financeiro</h5>
+    <div class="card border-0 shadow-sm p-4 mt-4 mb-4" style="background-color: #f8f9fa;">
+        <div class="row align-items-center mb-4">
+            <div class="col-8">
+                <h5 class="fw-bold mb-0 text-success"><i class="bi bi-wallet2"></i> Controle Financeiro</h5>
+                <small class="text-muted">Acompanhe os pagamentos parciais desta Ordem de Serviço</small>
+            </div>
+            <div class="col-4 text-end">
+                <?php if ($podeEditar): ?>
+                    <button type="button" class="btn btn-success btn-sm fw-bold px-3 py-2 shadow-sm rounded-pill" data-bs-toggle="modal" data-bs-target="#modalPagamento">
+                        <i class="bi bi-cash-coin"></i> Lançar Pagamento
+                    </button>
+                <?php endif; ?>
+            </div>
         </div>
-        <div class="col-4 text-end">
-            <?php if ($podeEditar): ?>
-                <button type="button" class="btn btn-success btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#modalPagamento"><i class="bi bi-cash-coin"></i> Lançar Pagamento</button>
-            <?php endif; ?>
-        </div>
-    </div>
     
     <div class="row mb-4">
         <div class="col-md-6">
@@ -356,7 +359,7 @@ $podeEditar = $isAdmin || ($_SESSION['pode_editar_precos'] ?? 0);
         </div>
       </div>
     </div>
-    <?php endif; ?>
+    </div> <!-- .card financeiro -->
     <?php endif; ?>
 
 </div>
