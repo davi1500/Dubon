@@ -18,6 +18,10 @@ try {
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 
+    // Migrações dinâmicas para o Módulo de Contratos (PMOC)
+    try { $pdo->exec("ALTER TABLE servicos ADD COLUMN contrato_id INTEGER"); } catch (Exception $e) {}
+    try { $pdo->exec("ALTER TABLE servicos ADD COLUMN is_fatura_contrato INTEGER DEFAULT 0"); } catch (Exception $e) {}
+
     // Verifica se o banco de dados foi inicializado.
     // Se a tabela 'servicos' não existir, o sistema para e avisa o usuário.
     try {

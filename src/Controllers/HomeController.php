@@ -180,10 +180,14 @@ class HomeController
         // Busca produtos com estoque > 0 para adicionar na OS
         $produtos = $pdo->query("SELECT * FROM produtos WHERE estoque > 0 ORDER BY nome ASC")->fetchAll();
 
+        // Busca contratos ativos para vínculo
+        $contratos = $pdo->query("SELECT id, cliente_id, maquinas_cobertas FROM contratos WHERE ativo = 1")->fetchAll();
+
         return view('novo_servico', [
             'clientes' => $clientes,
             'catalogo' => $catalogo,
-            'produtos' => $produtos
+            'produtos' => $produtos,
+            'contratos' => $contratos
         ]);
     }
 
@@ -204,6 +208,7 @@ class HomeController
                 $obs = $_POST['laudo_tecnico'] ?? ''; // Observações Internas (Não aparece na OS)
                 $laudo_tecnico = $_POST['obs'] ?? ''; // Laudo Técnico (Visível para o cliente)
                 $garantia = $_POST['garantia'] ?? 90;
+                $contrato_id = !empty($_POST['contrato_id']) ? $_POST['contrato_id'] : null;
                 
                 $pode_editar = $_SESSION['pode_editar_precos'] ?? 0;
                 // Se é admin, sempre pode editar
@@ -248,7 +253,7 @@ class HomeController
                 }
 
                 // 3. Insere o Serviço
-                $stmt = $pdo->prepare("INSERT INTO servicos (cliente, cliente_id, data_servico, status, valor_total, desconto, valor_pago, garantia, obs, laudo_tecnico) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO servicos (cliente, cliente_id, data_servico, status, valor_total, desconto, valor_pago, garantia, obs, laudo_tecnico, contrato_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([
                     $cliente_nome,
                     $cliente_id,
@@ -259,7 +264,8 @@ class HomeController
                     0, // Valor pago (pode ser implementado depois)
                     $garantia,
                     $obs,
-                    $laudo_tecnico
+                    $laudo_tecnico,
+                    $contrato_id
                 ]);
                 
                 $servico_id = $pdo->lastInsertId();
@@ -317,6 +323,11 @@ class HomeController
 
                 // 6. Atualiza o valor total e pago do serviço
                 $valor_final = $valor_total_servico - $desconto;
+                
+                // Se estiver coberto por contrato, o valor cobrado do cliente nesta OS é 0
+                if (!empty($contrato_id)) {
+                    $valor_final = 0;
+                }
                 
                 // Atualiza o valor total na OS recém-criada (valor_pago começa como 0)
                 $stmtUpdateTotal = $pdo->prepare("UPDATE servicos SET valor_total = ?, valor_pago = 0 WHERE id = ?");
@@ -386,12 +397,16 @@ class HomeController
         // Busca todos os produtos (mesmo sem estoque, pois pode estar editando algo antigo)
         $produtos = $pdo->query("SELECT * FROM produtos ORDER BY nome ASC")->fetchAll();
 
+        // Busca contratos ativos para vínculo
+        $contratos = $pdo->query("SELECT id, cliente_id, maquinas_cobertas FROM contratos WHERE ativo = 1")->fetchAll();
+
         // 4. Reutiliza a view de novo serviço, passando os dados do serviço a ser editado
         return view('novo_servico', [
             'servico' => $servico,
             'clientes' => $clientes,
             'catalogo' => $catalogo,
-            'produtos' => $produtos
+            'produtos' => $produtos,
+            'contratos' => $contratos
         ]);
     }
 
@@ -502,6 +517,7 @@ class HomeController
                 $obs = $_POST['laudo_tecnico'] ?? ''; // Observações Internas (Não aparece na OS)
                 $laudo_tecnico = $_POST['obs'] ?? ''; // Laudo Técnico (Visível para o cliente)
                 $garantia = $_POST['garantia'] ?? 90;
+                $contrato_id = !empty($_POST['contrato_id']) ? $_POST['contrato_id'] : null;
                 $desconto = floatval(str_replace(',', '.', str_replace('.', '', $_POST['desconto'] ?? '0')));
                 
                 // Arrays dos itens
@@ -575,12 +591,16 @@ class HomeController
                         $qtd = $prods_qtd[$i] < 1 ? 1 : $prods_qtd[$i];
                         $valor_total_itens += ($preco * $qtd);
                     }
-                }
                 $valor_final = $valor_total_itens - $desconto;
+                
+                // Se estiver coberto por contrato, o valor cobrado do cliente nesta OS é 0
+                if (!empty($contrato_id)) {
+                    $valor_final = 0;
+                }
 
                 // 3. Atualiza o serviço principal (SEM mexer no valor_pago ainda para não quebrar o histórico)
-                $stmt = $pdo->prepare("UPDATE servicos SET cliente = ?, cliente_id = ?, data_servico = ?, status = ?, valor_total = ?, desconto = ?, garantia = ?, obs = ?, laudo_tecnico = ? WHERE id = ?");
-                $stmt->execute([$cliente_nome, $cliente_id, $data_servico, $status, $valor_final, $desconto, $garantia, $obs, $laudo_tecnico, $id]);
+                $stmt = $pdo->prepare("UPDATE servicos SET cliente = ?, cliente_id = ?, data_servico = ?, status = ?, valor_total = ?, desconto = ?, garantia = ?, obs = ?, laudo_tecnico = ?, contrato_id = ? WHERE id = ?");
+                $stmt->execute([$cliente_nome, $cliente_id, $data_servico, $status, $valor_final, $desconto, $garantia, $obs, $laudo_tecnico, $contrato_id, $id]);
 
                 // Se mudou o status para Pago no seletor e ainda não estava totalmente pago, insere o restante
                 $stmtCheckPago = $pdo->prepare("SELECT valor_pago FROM servicos WHERE id = ?");

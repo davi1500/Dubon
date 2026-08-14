@@ -82,6 +82,45 @@ $podeEditar = $isAdmin || ($_SESSION['pode_editar_precos'] ?? 0);
                 <input type="date" name="data_servico" class="form-control form-control-lg bg-light border-0" value="<?php echo $is_edit ? ($servico['data_servico'] ?? date('Y-m-d')) : date('Y-m-d'); ?>" required>
             </div>
 
+            <?php if(!empty($contratos)): ?>
+            <div class="col-12 mt-3">
+                <div class="alert alert-success border-0 shadow-sm d-flex align-items-center mb-0 p-3 rounded-4">
+                    <div class="form-check form-switch mb-0 fs-5">
+                        <input class="form-check-input" type="checkbox" id="checkPMOC" onchange="togglePMOC(this)">
+                        <label class="form-check-label ms-2 fw-bold text-success" for="checkPMOC">Coberto pelo Contrato PMOC (Isento)</label>
+                    </div>
+                    <select name="contrato_id" id="selectContrato" class="form-select border-0 ms-4 w-50" style="display: none;">
+                        <option value="">Selecione o contrato...</option>
+                        <?php foreach($contratos as $c): 
+                            $nomeC = '';
+                            foreach($clientes as $cl) { if($cl['id'] == $c['cliente_id']) { $nomeC = $cl['nome']; break; } }
+                        ?>
+                            <option value="<?php echo $c['id']; ?>" data-cliente-id="<?php echo $c['cliente_id']; ?>" <?php echo (isset($servico['contrato_id']) && $servico['contrato_id'] == $c['id']) ? 'selected' : ''; ?>>
+                                PMOC - <?php echo htmlspecialchars($nomeC); ?> (<?php echo htmlspecialchars($c['maquinas_cobertas']); ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+            <script>
+                function togglePMOC(checkbox) {
+                    const sel = document.getElementById('selectContrato');
+                    if(checkbox.checked) {
+                        sel.style.display = 'block';
+                    } else {
+                        sel.style.display = 'none';
+                        sel.value = '';
+                    }
+                }
+                <?php if(isset($servico['contrato_id']) && !empty($servico['contrato_id'])): ?>
+                document.addEventListener('DOMContentLoaded', () => {
+                    document.getElementById('checkPMOC').checked = true;
+                    togglePMOC(document.getElementById('checkPMOC'));
+                });
+                <?php endif; ?>
+            </script>
+            <?php endif; ?>
+
             <div class="col-12"><hr class="my-2"></div>
 
             <!-- Seção 2: Itens e Produtos (Abas) -->

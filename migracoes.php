@@ -52,7 +52,7 @@ try {
 
     // Atualização de Schema para Serviços (Novos Campos)
     // Garante que as colunas existam mesmo se a tabela já foi criada anteriormente
-    $cols_servicos = ['cliente_id' => 'INTEGER', 'laudo_tecnico' => 'TEXT', 'servico_pai_id' => 'INTEGER'];
+    $cols_servicos = ['cliente_id' => 'INTEGER', 'laudo_tecnico' => 'TEXT', 'servico_pai_id' => 'INTEGER', 'contrato_id' => 'INTEGER', 'is_fatura_contrato' => 'INTEGER DEFAULT 0'];
     foreach ($cols_servicos as $col => $type) {
         try {
             $pdo->exec("ALTER TABLE servicos ADD COLUMN $col $type");

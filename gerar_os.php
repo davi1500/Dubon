@@ -56,6 +56,25 @@ $config = array_merge([
 // Define o título do documento baseado no status
 $tituloDoc = ($servico['status'] == 'Pago') ? 'RECIBO DE PAGAMENTO' : 'ORDEM DE SERVIÇO';
 
+// --- Lógica para PMOC (Fatura de Contrato) ---
+$visitas = [];
+if (isset($servico['is_fatura_contrato']) && $servico['is_fatura_contrato'] == 1 && $servico['contrato_id']) {
+    $tituloDoc = 'FATURA DE CONTRATO (PMOC)';
+    $data_fatura = $servico['data_servico'];
+    // Busca as OSs normais (visitas) vinculadas ao mesmo contrato nos últimos 30 dias (ciclo)
+    $stmtVisitas = $pdo->prepare("
+        SELECT id, data_servico, laudo_tecnico 
+        FROM servicos 
+        WHERE contrato_id = ? 
+          AND is_fatura_contrato = 0 
+          AND data_servico <= ? 
+          AND data_servico >= date(?, '-1 month') 
+        ORDER BY data_servico ASC
+    ");
+    $stmtVisitas->execute([$servico['contrato_id'], $data_fatura, $data_fatura]);
+    $visitas = $stmtVisitas->fetchAll();
+}
+
 // --- Lógica para o WhatsApp ---
 $telefoneLimpo = '';
 if (!empty($servico['telefone'])) {
@@ -252,6 +271,25 @@ $linkWpp = "https://wa.me/{$telefoneLimpo}?text=" . urlencode($mensagemWpp);
         <h6 class="fw-bold border-bottom pb-2 mb-2">Laudo Técnico</h6>
         <p class="mb-0"><?php echo nl2br(htmlspecialchars($servico['laudo_tecnico'] ?: 'Serviço realizado conforme solicitado.')); ?></p>
     </div>
+
+    <!-- Relatório PMOC (Apenas se for Fatura de Contrato) -->
+    <?php if (isset($servico['is_fatura_contrato']) && $servico['is_fatura_contrato'] == 1): ?>
+    <div class="box-info mb-4" style="border-left: 4px solid #0d6efd;">
+        <h6 class="fw-bold border-bottom pb-2 mb-3 text-primary"><i class="bi bi-card-checklist"></i> Relatório de Atendimentos do Mês (Visitas PMOC)</h6>
+        <?php if (count($visitas) > 0): ?>
+            <ul class="list-unstyled mb-0">
+                <?php foreach($visitas as $visita): ?>
+                    <li class="mb-2 border-bottom pb-2">
+                        <strong>Dia <?php echo date('d/m/Y', strtotime($visita['data_servico'])); ?> (OS #<?php echo $visita['id']; ?>)</strong><br>
+                        <small class="text-muted"><?php echo nl2br(htmlspecialchars($visita['laudo_tecnico'] ?: 'Visita de rotina realizada. Detalhes não preenchidos.')); ?></small>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php else: ?>
+            <p class="mb-0 text-muted small">Nenhuma visita técnica com OS vinculada a este contrato foi registrada no ciclo.</p>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
 
     <!-- Termos de Garantia -->
     <div class="mt-4 pt-3 border-top">

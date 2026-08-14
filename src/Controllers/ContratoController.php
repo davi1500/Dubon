@@ -76,15 +76,15 @@ class ContratoController
         foreach ($contratos as $c) {
             // Se o mês atual ainda não foi gerado e já chegou/passou do dia de vencimento
             if ($c['ultimo_mes_gerado'] !== $mesAtual && $diaAtual >= $c['dia_vencimento']) {
-                // 1. Gera a OS Preventiva
-                $stmtOS = $pdo->prepare("INSERT INTO servicos (cliente_id, valor_total, valor_pago, status) VALUES (?, 0, 0, 'pendente')");
-                $stmtOS->execute([$c['cliente_id']]);
+                // 1. Gera a Fatura do Contrato (OS de Cobrança)
+                $stmtOS = $pdo->prepare("INSERT INTO servicos (cliente_id, contrato_id, is_fatura_contrato, valor_total, valor_pago, status) VALUES (?, ?, 1, ?, 0, 'pendente')");
+                $stmtOS->execute([$c['cliente_id'], $c['id'], $c['valor_mensal']]);
                 $osId = $pdo->lastInsertId();
 
-                // 2. Insere os Itens da OS (Mão de Obra do Contrato)
-                $desc = "Manutenção Preventiva PMOC (Mensal). Equipamentos: " . $c['maquinas_cobertas'];
-                $stmtItem = $pdo->prepare("INSERT INTO servicos_itens (servico_id, descricao, valor) VALUES (?, ?, 0)");
-                $stmtItem->execute([$osId, $desc]);
+                // 2. Insere os Itens da OS (Mensalidade)
+                $desc = "Fatura Mensal de Contrato PMOC (Equipamentos: " . $c['maquinas_cobertas'] . ")";
+                $stmtItem = $pdo->prepare("INSERT INTO servicos_itens (servico_id, descricao, valor) VALUES (?, ?, ?)");
+                $stmtItem->execute([$osId, $desc, $c['valor_mensal']]);
 
                 // 3. Atualiza o Contrato para não gerar novamente este mês
                 $pdo->prepare("UPDATE contratos SET ultimo_mes_gerado = ? WHERE id = ?")->execute([$mesAtual, $c['id']]);
