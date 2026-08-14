@@ -79,10 +79,11 @@ $empresaLogo = $configData['empresa_logo'] ?? '';
                             <div class="row g-2">
                                 <div class="col-12 item-input-wrapper position-relative">
                                     <label class="form-label small text-muted mb-1">Serviço</label>
-                                    <div class="input-group input-group-sm">
+                                    <div class="input-group input-group-sm mb-1">
                                         <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
                                         <input type="text" class="form-control border-start-0 item-desc" placeholder="Ex: Instalação 9000 BTUs..." onkeyup="mostrarSugestoes(this)">
                                     </div>
+                                    <input type="text" class="form-control form-control-sm item-detalhe" placeholder="Detalhe opcional (Ex: sem material)" onkeyup="atualizarPreview()">
                                     <ul class="list-group sugestoes-lista"></ul>
                                 </div>
                                 <div class="col-6">
@@ -103,6 +104,11 @@ $empresaLogo = $configData['empresa_logo'] ?? '';
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-secondary">Desconto Global (R$)</label>
                         <input type="text" id="inputDesconto" class="form-control form-control-sm" value="0,00" onkeyup="mascaraMoeda(this); atualizarPreview()">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-secondary">Observações Gerais</label>
+                        <textarea id="inputObs" class="form-control form-control-sm" rows="3" placeholder="Garantia, prazos, formas de pagamento..." onkeyup="atualizarPreview()"></textarea>
                     </div>
                 </div>
             </div>
@@ -147,8 +153,14 @@ $empresaLogo = $configData['empresa_logo'] ?? '';
                 </div>
 
                 <div class="ticket-footer">
-                    <div class="row justify-content-end">
-                        <div class="col-sm-6 col-md-5">
+                    <div class="row justify-content-between">
+                        <div class="col-sm-12 col-md-6 mb-3 mb-md-0">
+                            <div id="ticketObsContainer" style="display: none;">
+                                <h6 class="fw-bold text-secondary mb-1">Observações:</h6>
+                                <p class="small text-muted mb-0" id="ticketObs" style="white-space: pre-wrap;"></p>
+                            </div>
+                        </div>
+                        <div class="col-sm-12 col-md-5">
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="text-muted">Subtotal:</span>
                                 <span class="fw-bold" id="ticketSubtotal">R$ 0,00</span>
@@ -205,10 +217,11 @@ $empresaLogo = $configData['empresa_logo'] ?? '';
             <div class="row g-2">
                 <div class="col-12 item-input-wrapper position-relative">
                     <label class="form-label small text-muted mb-1">Serviço</label>
-                    <div class="input-group input-group-sm">
+                    <div class="input-group input-group-sm mb-1">
                         <span class="input-group-text bg-white border-end-0 text-muted"><i class="bi bi-search"></i></span>
                         <input type="text" class="form-control border-start-0 item-desc" placeholder="Ex: Instalação..." onkeyup="mostrarSugestoes(this)">
                     </div>
+                    <input type="text" class="form-control form-control-sm item-detalhe" placeholder="Detalhe opcional" onkeyup="atualizarPreview()">
                     <ul class="list-group sugestoes-lista"></ul>
                 </div>
                 <div class="col-6">
@@ -288,6 +301,7 @@ $empresaLogo = $configData['empresa_logo'] ?? '';
 
         linhas.forEach(row => {
             const desc = row.querySelector('.item-desc').value.trim();
+            const detalhe = row.querySelector('.item-detalhe').value.trim();
             const qtd = parseInt(row.querySelector('.item-qtd').value) || 1;
             const valor = parseDinheiro(row.querySelector('.item-valor').value);
             
@@ -296,12 +310,14 @@ $empresaLogo = $configData['empresa_logo'] ?? '';
                 subtotal += totalItem;
                 itensAdd++;
 
+                let detalheHTML = detalhe ? `<br><small class="text-muted">\${detalhe}</small>` : '';
+
                 ticketItens.innerHTML += `
                     <tr>
-                        <td class="fw-bold">${desc}</td>
-                        <td class="text-center">${qtd}</td>
-                        <td class="text-end">R$ ${formatDinheiro(valor)}</td>
-                        <td class="text-end fw-bold">R$ ${formatDinheiro(totalItem)}</td>
+                        <td><span class="fw-bold">\${desc}</span>\${detalheHTML}</td>
+                        <td class="text-center">\${qtd}</td>
+                        <td class="text-end">R$ \${formatDinheiro(valor)}</td>
+                        <td class="text-end fw-bold">R$ \${formatDinheiro(totalItem)}</td>
                     </tr>
                 `;
             }
@@ -324,6 +340,18 @@ $empresaLogo = $configData['empresa_logo'] ?? '';
         }
 
         document.getElementById('ticketTotal').innerText = 'R$ ' + formatDinheiro(total);
+        
+        // Trata observações globais
+        const obs = document.getElementById('inputObs').value.trim();
+        const obsContainer = document.getElementById('ticketObsContainer');
+        const ticketObs = document.getElementById('ticketObs');
+        if(obs) {
+            ticketObs.innerText = obs;
+            obsContainer.style.display = 'block';
+        } else {
+            ticketObs.innerText = '';
+            obsContainer.style.display = 'none';
+        }
     }
 
     function copiarWhatsApp() {
@@ -335,6 +363,7 @@ $empresaLogo = $configData['empresa_logo'] ?? '';
 
         linhas.forEach(row => {
             const desc = row.querySelector('.item-desc').value.trim();
+            const detalhe = row.querySelector('.item-detalhe').value.trim();
             const qtd = parseInt(row.querySelector('.item-qtd').value) || 1;
             const valor = parseDinheiro(row.querySelector('.item-valor').value);
             
@@ -343,6 +372,9 @@ $empresaLogo = $configData['empresa_logo'] ?? '';
                 subtotal += totalItem;
                 itensAdd++;
                 texto += `✅ ${qtd}x ${desc} - R$ ${formatDinheiro(totalItem)}\n`;
+                if(detalhe) {
+                    texto += `   _↳ ${detalhe}_\n`;
+                }
             }
         });
 
@@ -360,6 +392,12 @@ $empresaLogo = $configData['empresa_logo'] ?? '';
             texto += `Desconto: - R$ ${formatDinheiro(desconto)}\n`;
         }
         texto += `*TOTAL GERAL: R$ ${formatDinheiro(total)}*\n\n`;
+        
+        const obs = document.getElementById('inputObs').value.trim();
+        if(obs) {
+            texto += `*Observações:*\n${obs}\n\n`;
+        }
+        
         texto += `_Orçamento válido por 7 dias. Valores sujeitos a confirmação técnica._\n`;
         texto += `Fico à disposição para qualquer dúvida!`;
 
