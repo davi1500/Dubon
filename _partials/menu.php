@@ -239,6 +239,11 @@ $uri = $_SERVER['REQUEST_URI'];
             </a>
         </li>
         <li class="nav-item">
+            <a class="nav-link <?php echo str_starts_with($uri, '/orcamento-rapido') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/orcamento-rapido">
+                <i class="bi bi-calculator"></i> Orçamento Rápido
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link <?php echo str_starts_with($uri, '/clientes') ? 'active' : ''; ?>" href="<?php echo BASE_URL; ?>/clientes">
                 <i class="bi bi-people-fill"></i> Clientes
             </a>

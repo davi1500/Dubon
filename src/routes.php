@@ -15,6 +15,9 @@ $router->post('servicos/status/{id}', 'HomeController@updateStatus'); // Muda o 
 $router->post('servicos/pagar/{id}', 'PagamentoController@store');
 $router->post('servicos/pagamento/excluir/{id}', 'PagamentoController@delete');
 
+// --- Orçamento Rápido ---
+$router->get('orcamento-rapido', 'OrcamentoController@index');
+
 // --- Clientes ---
 $router->get('clientes', 'ClienteController@index');
 $router->post('clientes/salvar', 'ClienteController@store');
