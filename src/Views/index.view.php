@@ -437,7 +437,6 @@ $dias_semana_map = [
             });
         }
     });
-    });
 </script>
 
 <!-- Modais de Ação Rápida -->

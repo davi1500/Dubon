@@ -83,6 +83,7 @@ Principais Tabelas:
 - catalogo (Preços padrão de serviços)
 
 --- ATUALIZAÇÕES RECENTES ---
+- Correção de Bug (Dashboard): Corrigido erro de sintaxe JavaScript na tela inicial (`index.view.php`) que impedia o funcionamento do botão "Ver mais" e do filtro de busca no Kanban de serviços.
 - Nomenclatura Padronizada de Serviços: O catálogo foi totalmente reestruturado, agrupando serviços por faixas de capacidade (Até 12k, 18k-24k) e segmentando por áreas (Splits, Lavadoras, Câmaras Frias, Geladeiras). Fim dos nomes genéricos como "instalação A".
 - Arquitetura (Deploy): Scripts avulsos como `atualizar_catalogo.php` devem residir na pasta `public/` para evitar o bloqueio de rotas pelo Front Controller (Erro 404).
 
