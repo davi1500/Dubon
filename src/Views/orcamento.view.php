@@ -298,10 +298,10 @@ $empresaLogo = $configData['empresa_logo'] ?? '';
 
                 ticketItens.innerHTML += `
                     <tr>
-                        <td class="fw-bold">\${desc}</td>
-                        <td class="text-center">\${qtd}</td>
-                        <td class="text-end">R$ \${formatDinheiro(valor)}</td>
-                        <td class="text-end fw-bold">R$ \${formatDinheiro(totalItem)}</td>
+                        <td class="fw-bold">${desc}</td>
+                        <td class="text-center">${qtd}</td>
+                        <td class="text-end">R$ ${formatDinheiro(valor)}</td>
+                        <td class="text-end fw-bold">R$ ${formatDinheiro(totalItem)}</td>
                     </tr>
                 `;
             }
