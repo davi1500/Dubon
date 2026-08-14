@@ -83,9 +83,13 @@ Principais Tabelas:
 - catalogo (Preços padrão de serviços)
 
 --- ATUALIZAÇÕES RECENTES ---
-- Correção de Bug (Dashboard): Corrigido erro de sintaxe JavaScript na tela inicial (`index.view.php`) que impedia o funcionamento do botão "Ver mais" e do filtro de busca no Kanban de serviços.
-- Nomenclatura Padronizada de Serviços: O catálogo foi totalmente reestruturado, agrupando serviços por faixas de capacidade (Até 12k, 18k-24k) e segmentando por áreas (Splits, Lavadoras, Câmaras Frias, Geladeiras). Fim dos nomes genéricos como "instalação A".
-- Arquitetura (Deploy): Scripts avulsos como `atualizar_catalogo.php` devem residir na pasta `public/` para evitar o bloqueio de rotas pelo Front Controller (Erro 404).
+- Implementação PMOC (Contratos):
+  1. Criação do campo `contrato_id` e `is_fatura_contrato` na tabela `servicos`.
+  2. Emissão Inteligente de Fatura: O sistema agora gera a OS de faturamento com o valor mensal real do contrato (ex: R$ 2.500) em vez de R$ 0.
+  3. Vínculo de OS de Visita: A tela de criação/edição de OS permite marcar uma visita como coberta pelo PMOC, zerando o valor final pro cliente.
+  4. Relatório de Execução no PDF: O `gerar_os.php` identifica faturas de contrato e anexa automaticamente o relatório de todas as visitas técnicas vinculadas (e executadas) durante aquele ciclo mensal.
+- Correção de Bug (Dashboard): Corrigido erro de sintaxe JavaScript na tela inicial (`index.view.php`) que impedia o funcionamento do botão "Ver mais".
+- Nomenclatura Padronizada de Serviços: Catálogo reestruturado por áreas (Splits, Lavadoras, Câmaras Frias).
 
 --- PRÓXIMOS PASSOS (TODO LIST) ---
 1. (Opcional Futuro) Integração com API de WhatsApp para disparos automáticos.
