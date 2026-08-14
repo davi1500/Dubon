@@ -13,7 +13,7 @@ class OrcamentoController
         }
 
         // Buscar catálogo de serviços ordenado por categoria
-        $stmtCat = $pdo->query("SELECT * FROM catalogo ORDER BY categoria, nome");
+        $stmtCat = $pdo->query("SELECT * FROM catalogo ORDER BY categoria_id, nome");
         $catalogo = $stmtCat->fetchAll(PDO::FETCH_ASSOC);
 
         // O orçamento rápido não precisa buscar produtos ou clientes, 
