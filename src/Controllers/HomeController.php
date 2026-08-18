@@ -591,6 +591,7 @@ class HomeController
                         $qtd = $prods_qtd[$i] < 1 ? 1 : $prods_qtd[$i];
                         $valor_total_itens += ($preco * $qtd);
                     }
+                }
                 $valor_final = $valor_total_itens - $desconto;
                 
                 // Se estiver coberto por contrato, o valor cobrado do cliente nesta OS é 0
