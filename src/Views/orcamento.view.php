@@ -18,6 +18,7 @@ $empresaLogo = $configData['empresa_logo'] ?? '';
     <title>Orçamento Rápido - Dubom</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         body { background-color: #eef2f6; }
         .main-content { transition: margin-left 0.3s ease; padding: 2rem; width: 100%; }
@@ -61,8 +62,9 @@ $empresaLogo = $configData['empresa_logo'] ?? '';
     <div class="d-flex justify-content-between align-items-center mb-4 no-print">
         <h4 class="fw-bold mb-0 text-secondary"><i class="bi bi-calculator text-primary"></i> Orçamento Rápido</h4>
         <div>
-            <button class="btn btn-success me-2" onclick="copiarWhatsApp()"><i class="bi bi-whatsapp"></i> Copiar para WhatsApp</button>
-            <button class="btn btn-secondary" onclick="window.print()"><i class="bi bi-printer"></i> Gerar PDF</button>
+            <button class="btn btn-success me-2" onclick="copiarWhatsApp()"><i class="bi bi-whatsapp"></i> Copiar Texto</button>
+            <button class="btn btn-danger me-2" onclick="sharePDF(this)"><i class="bi bi-file-earmark-pdf"></i> Baixar / Enviar PDF</button>
+            <button class="btn btn-secondary" onclick="window.print()"><i class="bi bi-printer"></i> Imprimir</button>
         </div>
     </div>
 
@@ -415,6 +417,41 @@ $empresaLogo = $configData['empresa_logo'] ?? '';
             document.body.removeChild(textArea);
             alert('Copiado para a área de transferência!\nVocê já pode colar no WhatsApp do cliente.');
         });
+    }
+
+    async function sharePDF(btn) {
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Gerando...';
+        btn.disabled = true;
+
+        const element = document.querySelector('.ticket');
+        const opt = {
+            margin: [10, 10, 10, 10],
+            filename: 'Orcamento_Dubom.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        try {
+            const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+            const file = new File([pdfBlob], 'Orcamento_Dubom.pdf', { type: 'application/pdf' });
+
+            if (navigator.canShare && navigator.share) {
+                await navigator.share({ files: [file], title: 'Orçamento Dubom', text: 'Segue o orçamento em anexo.' });
+            } else {
+                const url = URL.createObjectURL(pdfBlob);
+                const a = document.createElement('a'); 
+                a.href = url; 
+                a.download = 'Orcamento_Dubom.pdf'; 
+                a.click();
+            }
+        } catch (err) {
+            alert('Erro ao gerar PDF: ' + err.message);
+        } finally {
+            btn.innerHTML = originalText; 
+            btn.disabled = false;
+        }
     }
 
 </script>
