@@ -310,14 +310,14 @@ $empresaLogo = $configData['empresa_logo'] ?? '';
                 subtotal += totalItem;
                 itensAdd++;
 
-                let detalheHTML = detalhe ? `<br><small class="text-muted">\${detalhe}</small>` : '';
+                let detalheHTML = detalhe ? `<br><small class="text-muted">${detalhe}</small>` : '';
 
                 ticketItens.innerHTML += `
                     <tr>
-                        <td><span class="fw-bold">\${desc}</span>\${detalheHTML}</td>
-                        <td class="text-center">\${qtd}</td>
-                        <td class="text-end">R$ \${formatDinheiro(valor)}</td>
-                        <td class="text-end fw-bold">R$ \${formatDinheiro(totalItem)}</td>
+                        <td><span class="fw-bold">${desc}</span>${detalheHTML}</td>
+                        <td class="text-center">${qtd}</td>
+                        <td class="text-end">R$ ${formatDinheiro(valor)}</td>
+                        <td class="text-end fw-bold">R$ ${formatDinheiro(totalItem)}</td>
                     </tr>
                 `;
             }
